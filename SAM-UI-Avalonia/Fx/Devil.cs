@@ -32,8 +32,23 @@ public sealed class DevilEgg
 
     public bool Active => _active;
 
-    public void Start(double t)
+    /// <summary>This visit ends by escaping onto the desktop (only when the user pressed D).</summary>
+    private bool _escape;
+
+    /// <summary>Set when an escaping devil reaches its exit: where it is, so a desktop window can take over.</summary>
+    public (double X, double Y, double Px, bool FaceLeft)? Handoff { get; set; }
+
+    /// <summary>"D" again while it's here: leave now (and escape).</summary>
+    public void LeaveNow(double t, bool escape)
     {
+        _escape |= escape;
+        _until = Math.Min(_until, t + 2.0);
+    }
+
+    public void Start(double t, bool escape = false)
+    {
+        _escape = escape;
+        Handoff = null;
         _active = true;
         _start = t;
         _until = t + 30 + Random.Shared.NextDouble() * 15; // 30-45 s
@@ -60,6 +75,12 @@ public sealed class DevilEgg
         double inT = Math.Clamp(e / 2.0, 0, 1), outT = Math.Clamp((t - (_until - 2.0)) / 2.0, 0, 1);
         double off = _side < 0 ? -sw : w + sw;
         if (inT < 1) { x = off + (x - off) * Smooth(inT); vx = -_side; }
+        if (_escape && t >= _until - 2.0)
+        {
+            Handoff = (x, y, px, vx < 0);
+            _active = false;
+            return false;
+        }
         if (outT > 0)
         {
             double exit = vx >= 0 ? w + sw : -sw;
@@ -67,10 +88,15 @@ public sealed class DevilEgg
         }
         if (t >= _until) { _active = false; return false; }
 
-        bool faceLeft = vx < 0;
-        int frame = (int)(e * 12) % 4;
+        DrawSprite(ctx, x - sw / 2, y - sh / 2, px, (int)(e * 12), vx < 0);
+        return true;
+    }
+
+    /// <summary>Paints the sprite with its top-left at (x0, y0). <paramref name="tick"/> drives the wing flap.</summary>
+    public static void DrawSprite(DrawingContext ctx, double x0, double y0, double px, int tick, bool faceLeft)
+    {
+        int frame = tick % 4;
         char[,] g = Frames[frame == 3 ? 1 : frame];
-        double x0 = x - sw / 2, y0 = y - sh / 2;
         for (int pass = 0; pass < 2; pass++)
             for (int row = 0; row < H; row++)
                 for (int col = 0; col < W; col++)
@@ -81,8 +107,9 @@ public sealed class DevilEgg
                     if (pass == 0) ctx.FillRectangle(Shadow, new Rect(rx + px * 0.6, ry + px * 0.6, px, px));
                     else ctx.FillRectangle(Pal[c], new Rect(rx, ry, px, px));
                 }
-        return true;
     }
+
+    public const int SpriteW = W, SpriteH = H;
 
     private static double Smooth(double v) => v * v * (3 - 2 * v);
 

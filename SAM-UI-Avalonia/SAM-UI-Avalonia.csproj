@@ -8,7 +8,7 @@
     <ApplicationIcon>Assets\SAMUI.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <Platforms>AnyCPU;x64</Platforms>
-    <Version>1.6.0</Version>
+    <Version>1.6.1</Version>
     <Product>SAM-UI (Eggman Edition)</Product>
     <Authors>Eggman</Authors>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

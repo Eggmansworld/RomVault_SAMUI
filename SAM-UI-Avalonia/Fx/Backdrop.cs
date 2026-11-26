@@ -287,8 +287,7 @@ public sealed class VectorBackdrop : FxControl
             UpdateAndDrawBoing(ctx, w, h);
             if (FxClock.Enabled)
             {
-                if (_devilRequested) { _devilRequested = false; if (!_devil.Active) _devil.Start(FxClock.T); }
-                _devil.Draw(ctx, FxClock.T, w, h);
+                UpdateAndDrawDevil(ctx, w, h);
             }
         }
     }
@@ -552,11 +551,15 @@ public sealed class VectorBackdrop : FxControl
     // =================================================================== Boing ball easter egg
 
     /// <summary>The ball appears after this much time with the app open (and again this long after it leaves).</summary>
-    public const double BoingEverySeconds = 20 * 60;
+    public static readonly double BoingEverySeconds = TestSeconds ?? 20 * 60;
+
+    /// <summary>Testing only: SAMUI_EGG_SECONDS=n makes both timed visits come every n seconds.</summary>
+    private static double? TestSeconds => double.TryParse(Environment.GetEnvironmentVariable("SAMUI_EGG_SECONDS"), out double s) && s > 0 ? s : null;
     private const double BoingStaySeconds = 50;
 
     private static bool _boingRequested;
     private static double _boingLastEnd;       // FxClock time the last visit ended (0 = app start)
+    private bool _boingEscape;                 // this visit was started (or sent off) with the A key
     private bool _boingActive;
     private double _boingStart, _boingLastT, _boingX, _boingDir, _boingSpin;
 
@@ -565,6 +568,36 @@ public sealed class VectorBackdrop : FxControl
 
     private static bool _devilRequested;
     private readonly DevilEgg _devil = new();
+
+    /// <summary>The devil visits every 25 minutes (counted from the end of its last visit).</summary>
+    public static readonly double DevilEverySeconds = TestSeconds is { } ts ? ts * 1.25 : 25 * 60;
+    private static double _devilLastEnd;
+
+    private void UpdateAndDrawDevil(DrawingContext ctx, double w, double h)
+    {
+        double t = FxClock.T;
+        bool canEscape = BoingEscapes && OperatingSystem.IsWindows();
+        if (!_devil.Active)
+        {
+            if (_devilRequested) { _devilRequested = false; _devil.Start(t, escape: canEscape); }      // D: escapes at the end
+            else if (t - _devilLastEnd >= DevilEverySeconds) _devil.Start(t, escape: false);        // timed: stays inside
+        }
+        else if (_devilRequested)
+        {
+            _devilRequested = false;
+            _devil.LeaveNow(t, escape: canEscape); // D while it's here: off it goes (and out)
+        }
+
+        bool wasActive = _devil.Active;
+        _devil.Draw(ctx, t, w, h);
+        if (_devil.Handoff is { } hf && OperatingSystem.IsWindows() && TopLevel.GetTopLevel(this) is { } top)
+        {
+            _devil.Handoff = null;
+            double sw = DevilEgg.SpriteW * hf.Px, sh = DevilEgg.SpriteH * hf.Px;
+            DevilOverlay.Launch(this.PointToScreen(new Point(hf.X - sw / 2, hf.Y - sh / 2)), hf.Px, top.RenderScaling, hf.FaceLeft);
+        }
+        if (wasActive && !_devil.Active) _devilLastEnd = t; // restart the 25 minute timer
+    }
 
     /// <summary>"D" key: release the devil.</summary>
     public static void TriggerDevil() => _devilRequested = true;
@@ -585,6 +618,8 @@ public sealed class VectorBackdrop : FxControl
         {
             if (!_boingRequested && t - _boingLastEnd < BoingEverySeconds) return;
 
+            _boingEscape = _boingRequested; // A pressed: this visit escapes; timed visits stay inside
+
             _boingRequested = false;
             _boingActive = true;
             _boingStart = _boingLastT = t;
@@ -595,8 +630,9 @@ public sealed class VectorBackdrop : FxControl
 
         else if (_boingRequested)
         {
-            // "A" again while it's here: off you go
+            // "A" again while it's here: off you go (and out)
             _boingRequested = false;
+            _boingEscape = true;
             _boingStart = Math.Min(_boingStart, t - BoingStaySeconds - 0.01);
         }
 
@@ -629,7 +665,7 @@ public sealed class VectorBackdrop : FxControl
         // Leaving and touching the window edge: hand the ball to a see-through window so it
         // rolls out over the desktop and off the screen.
         bool atEdge = _boingDir > 0 ? _boingX + r >= w : _boingX - r <= 0;
-        if (leaving && atEdge && BoingEscapes && OperatingSystem.IsWindows() && TopLevel.GetTopLevel(this) is { } top)
+        if (leaving && atEdge && _boingEscape && BoingEscapes && OperatingSystem.IsWindows() && TopLevel.GetTopLevel(this) is { } top)
         {
             double vy = -4 * bounceH * (1 - 2 * p) / period;          // current vertical speed (DIP/s, down = +)
             double g = Math.Max(8 * bounceH / (period * period), 900); // same "gravity" as inside the window

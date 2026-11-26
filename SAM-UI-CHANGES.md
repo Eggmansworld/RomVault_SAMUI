@@ -1,5 +1,8 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.6.1 – 2026-11-26
+- Some unexpected guests have learned better manners... mostly.
+
 ## v1.6.0 – 2026-11-26
 - **SID tunes play to the end.** SID files don't store their length, so there used to be a 3-minute cut-off. Now a SID plays until it goes quiet (the jukebox then moves on). Tunes that loop forever keep playing until skipped. SETUP > SID TUNES can cap them at 3, 5 or 10 minutes.
 - SETUP wording: **NORMALIZE SONG VOLUMES**.
