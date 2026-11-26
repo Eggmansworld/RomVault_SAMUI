@@ -6,6 +6,10 @@ Eggman's devilish twist on RomVault's boring SAMUI app. Enjoy!
 [RomVault's RVWorld](https://github.com/RomVault/RVWorld). It recompresses files, folders and
 zip/7z archives into TorrentZip, Zip-ZSTD, 7Z-ZSTD and 7Z-LZMA, using RomVault's SAM/TrrntZip engine.
 
+<img width="2524" height="1622" alt="image" src="https://github.com/user-attachments/assets/a25ae073-06c6-4664-aae8-94fcd79cfdd9" />
+
+---
+
 ## What's different
 - **Full-width output list.** The controls sit across the top and there's a status bar at the bottom (counts, OK/FAIL/SKIP, size, speed, ETA).
 - **Stage → Preview → Start.** Drop files or folders anywhere on the window, use the FILES / FOLDER pickers, or type a path. Nothing runs until you press START. PREVIEW lists exactly what would be processed, with sizes.
