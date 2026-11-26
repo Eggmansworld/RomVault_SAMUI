@@ -243,6 +243,7 @@ public partial class MainWindow : Window
             // easter egg: more / fewer vector balls (not while typing in a text box)
             case Key.OemPlus or Key.Add when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 8 : 1); break;
             case Key.OemMinus or Key.Subtract when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -8 : -1); break;
+            case Key.A when e.Source is not TextBox && e.KeyModifiers == KeyModifiers.None: _vm.Boing(); break;
             default: return;
         }
         e.Handled = true;

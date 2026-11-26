@@ -736,6 +736,28 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public int MinStars => FxSettings.MinStars;
+    public int MaxStars => FxSettings.MaxStars;
+
+    public int StarCount
+    {
+        get => FxSettings.StarCount;
+        set
+        {
+            FxSettings.StarCount = value;
+            _cfg.StarCount = FxSettings.StarCount;
+            _cfg.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The "A" easter egg on the main window.</summary>
+    public void Boing()
+    {
+        VectorBackdrop.TriggerBoing();
+        Message = "BOING!";
+    }
+
     /// <summary>The + / - easter egg on the main window.</summary>
     public void NudgeBalls(int delta)
     {

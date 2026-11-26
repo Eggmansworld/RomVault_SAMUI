@@ -1,5 +1,11 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.3.0 – 2026-11-26
+- **Vector balls** are much bigger: the formation fills about three quarters of the output window at the top of each bounce. It now bounces off the bottom edge of the output window, just above the scroller, instead of mid-air. Shadows sit on that edge while the floor is showing.
+- **Star density** slider in SETUP (50 to 2,000 stars, default 180), saved to settings.
+- Rumour has it something drops by now and then... keep an eye on the screen.
+- Bundled tune renamed: "Demons are Forever PAL 50Hz (FROG).mod" (21 tunes).
+
 ## v1.2.0 – 2026-11-26
 | Area | Change |
 |------|--------|

@@ -22,6 +22,14 @@ public static class FxSettings
         set => _ballCount = Math.Clamp(value, MinBalls, MaxBalls);
     }
 
+    public const int MinStars = 50, MaxStars = 2000;
+    private static int _starCount = 180;
+    public static int StarCount
+    {
+        get => _starCount;
+        set => _starCount = Math.Clamp(value, MinStars, MaxStars);
+    }
+
     public static void Load(SamConfig c)
     {
         Starfield = c.ShowStarfield;
@@ -30,6 +38,7 @@ public static class FxSettings
         Floor = c.ShowFloor;
         Copper = c.ShowCopper;
         BallCount = c.BallCount;
+        StarCount = c.StarCount;
     }
 }
 
@@ -53,7 +62,7 @@ public sealed class VectorBackdrop : FxControl
     private const double CycleSeconds = 16;
     private const double FloorCycleSeconds = 60;
 
-    private readonly (double X, double Y, int Layer)[] _stars;
+    private (double X, double Y, int Layer)[] _stars = Array.Empty<(double, double, int)>();
 
     static VectorBackdrop()
     {
@@ -75,8 +84,6 @@ public sealed class VectorBackdrop : FxControl
 
     public VectorBackdrop()
     {
-        var rng = new Random(1911);
-        _stars = Enumerable.Range(0, 180).Select(_ => (rng.NextDouble(), rng.NextDouble(), rng.Next(3))).ToArray();
         Skin.Changed += () => _ballBrushes = null;
     }
 
@@ -273,10 +280,17 @@ public sealed class VectorBackdrop : FxControl
         if (floorAlpha > 0.01) DrawFloor(ctx, s, t, w, h, floorAlpha);
         if (FxSettings.Objects && Mode != "NONE") DrawObject(ctx, t, w, h);
         if (FxSettings.Balls) DrawBalls(ctx, t, w, h, floorAlpha);
+        if (AllowBoing) UpdateAndDrawBoing(ctx, w, h);
     }
 
     private void DrawStars(DrawingContext ctx, Scheme s, double t, double w, double h)
     {
+        if (_stars.Length != FxSettings.StarCount)
+        {
+            // same seed, so changing the density adds / removes stars instead of reshuffling them all
+            var rng = new Random(1911);
+            _stars = Enumerable.Range(0, FxSettings.StarCount).Select(_ => (rng.NextDouble(), rng.NextDouble(), rng.Next(3))).ToArray();
+        }
         foreach (var (x, y, layer) in _stars)
         {
             double speed = (layer + 1) * 0.010;
@@ -479,32 +493,43 @@ public sealed class VectorBackdrop : FxControl
             m = m * m * (3 - 2 * m);
         }
 
-        // the whole group drifts sideways and bounces on the floor
-        double floorY = h * 0.86;
-        double radius = Math.Min(w, h) * 0.17;
-        double cx = w * (0.5 + 0.34 * Math.Sin(t * 0.09 + 2.4));
-        double cy = floorY - radius * 1.25 - Math.Abs(Math.Sin(t * 1.8)) * h * 0.16;
+        // Big formation that drifts sideways and bounces off the bottom edge of the output window.
+        // At the top of a bounce it fills roughly the top three quarters of the window.
+        double radius = Math.Min(h * 0.34, w * 0.28);
+        double cx = w * (0.5 + 0.30 * Math.Sin(t * 0.09 + 2.4));
         double ax = 0.35 + 0.2 * Math.Sin(t * 0.3), ay = t * 0.8, az = 0.1 * Math.Sin(t * 0.5);
         double ballR = radius * 0.13 * Math.Clamp(Math.Sqrt(24.0 / n), 0.45, 1.8);
 
         var balls = new (Point P, double Z, double F, int I)[n];
+        double top = double.MaxValue, bottom = double.MinValue;
         for (int i = 0; i < n; i++)
         {
             V3 a = Formation(fA, i, n, t), b = Formation(fB, i, n, t);
             var v = new V3(a.X + (b.X - a.X) * m, a.Y + (b.Y - a.Y) * m, a.Z + (b.Z - a.Z) * m);
-            var (p, near, z) = Project(v, ax, ay, az, cx, cy, radius);
-            balls[i] = (p, z, 3.0 / (z + 3.4), i);
+            var (p, _, z) = Project(v, ax, ay, az, cx, 0, radius); // y relative to the group centre for now
+            double f = 3.0 / (z + 3.4);
+            balls[i] = (p, z, f, i);
+            top = Math.Min(top, p.Y - ballR * f);
+            bottom = Math.Max(bottom, p.Y + ballR * f);
         }
 
-        // shadows on the floor while it's visible
+        // parabolic bounce: the lowest ball just touches the bottom edge on impact
+        const double period = 1.7;
+        double ph2 = t / period % 1;
+        double bounceH = Math.Max(h * 0.08, h - (bottom - top) - h * 0.06);
+        double lift = 4 * ph2 * (1 - ph2) * bounceH;
+        double cy = h - 1 - bottom - lift;
+        for (int i = 0; i < n; i++) balls[i].P = new Point(balls[i].P.X, balls[i].P.Y + cy);
+
+        // shadows on the bottom edge while the floor is showing
         if (floorAlpha > 0.05)
         {
-            IBrush shadow = B(Color.FromArgb((byte)(60 * floorAlpha), 0, 0, 0));
-            double lift = (floorY - cy) / (h * 0.5);
+            double closeness = 1 - lift / Math.Max(1, bounceH);
+            IBrush shadow = B(Color.FromArgb((byte)(70 * floorAlpha * (0.4 + 0.6 * closeness)), 0, 0, 0));
             foreach (var b in balls)
             {
-                double r = ballR * b.F * (1.1 - lift * 0.4);
-                ctx.DrawEllipse(shadow, null, new Point(b.P.X, floorY + b.Z * radius * 0.08), r * 1.2, r * 0.35);
+                double r = ballR * b.F * (0.7 + 0.5 * closeness);
+                ctx.DrawEllipse(shadow, null, new Point(b.P.X, h - 4 + b.Z * 3), r * 1.2, r * 0.3);
             }
         }
 
@@ -512,5 +537,106 @@ public sealed class VectorBackdrop : FxControl
         Array.Sort(balls, (x, y) => y.Z.CompareTo(x.Z));
         foreach (var b in balls)
             ctx.DrawEllipse(brushes[b.I % brushes.Length], null, b.P, ballR * b.F, ballR * b.F);
+    }
+
+    // =================================================================== Boing ball easter egg
+
+    /// <summary>The ball appears after this much time with the app open (and again this long after it leaves).</summary>
+    public const double BoingEverySeconds = 20 * 60;
+    private const double BoingStaySeconds = 50;
+
+    private static bool _boingRequested;
+    private static double _boingLastEnd;       // FxClock time the last visit ended (0 = app start)
+    private bool _boingActive;
+    private double _boingStart, _boingLastT, _boingX, _boingDir, _boingSpin;
+
+    /// <summary>Only the main window's backdrop shows the ball.</summary>
+    public bool AllowBoing { get; set; }
+
+    /// <summary>"A" key: bring the ball in now.</summary>
+    public static void TriggerBoing() => _boingRequested = true;
+
+    private void UpdateAndDrawBoing(DrawingContext ctx, double w, double h)
+    {
+        double t = FxClock.T;
+        if (!FxClock.Enabled) { _boingActive = false; _boingRequested = false; _boingLastEnd = t; return; }
+
+        double r = h * 0.375;                       // 75% of the output window tall
+        if (!_boingActive)
+        {
+            if (!_boingRequested && t - _boingLastEnd < BoingEverySeconds) return;
+            _boingRequested = false;
+            _boingActive = true;
+            _boingStart = _boingLastT = t;
+            _boingDir = Random.Shared.Next(2) == 0 ? 1 : -1;   // enter from the left or the right
+            _boingX = _boingDir > 0 ? -r : w + r;
+            _boingSpin = 0;
+        }
+
+        double dt = Math.Clamp(t - _boingLastT, 0, 0.1);
+        _boingLastT = t;
+        double speed = Math.Max(60, w / 11);       // slow roll: ~11 s to cross the window
+        _boingX += _boingDir * speed * dt;
+        _boingSpin += _boingDir * dt * 2.4;        // spins the way it rolls, flips at each wall
+
+        bool leaving = t - _boingStart > BoingStaySeconds;
+        if (!leaving)
+        {
+            // bounce off the side walls once fully inside
+            if (_boingDir > 0 && _boingX > w - r && t - _boingStart > 3) _boingDir = -1;
+            else if (_boingDir < 0 && _boingX < r && t - _boingStart > 3) _boingDir = 1;
+        }
+        else if (_boingX < -r - 4 || _boingX > w + r + 4)
+        {
+            _boingActive = false;
+            _boingLastEnd = t;                     // reset the 20 minute timer
+            return;
+        }
+
+        // vertical: parabolic bounce off the bottom edge
+        const double period = 2.4;
+        double p = (t - _boingStart) / period % 1;
+        double cy = h - r - 4 * p * (1 - p) * Math.Max(0, h - 2 * r);
+        DrawBoingBall(ctx, new Point(_boingX, cy), r, _boingSpin);
+    }
+
+    /// <summary>The red and white checkered sphere: 8 x 16 checks, axis tilted ~17 degrees.</summary>
+    private static void DrawBoingBall(DrawingContext ctx, Point c, double r, double spin)
+    {
+        const int lat = 8, lon = 16;
+        const double tilt = -0.30;
+        double st = Math.Sin(tilt), ct = Math.Cos(tilt);
+
+        (Point P, double Z) Pt(double la, double lo)
+        {
+            double x = Math.Cos(la) * Math.Sin(lo + spin), y = Math.Sin(la), z = Math.Cos(la) * Math.Cos(lo + spin);
+            double xt = x * ct - y * st, yt = x * st + y * ct; // tilt the axis
+            return (new Point(c.X + xt * r, c.Y - yt * r), z);
+        }
+
+        for (int i = 0; i < lat; i++)
+        {
+            double la0 = -Math.PI / 2 + i * Math.PI / lat, la1 = la0 + Math.PI / lat;
+            for (int j = 0; j < lon; j++)
+            {
+                double lo0 = j * Math.PI * 2 / lon, lo1 = lo0 + Math.PI * 2 / lon;
+                var a = Pt(la0, lo0); var b = Pt(la0, lo1); var cc = Pt(la1, lo1); var d = Pt(la1, lo0);
+                double zc = (a.Z + b.Z + cc.Z + d.Z) / 4;
+                if (zc < -0.05) continue;          // back of the ball
+                double shade = 0.62 + 0.38 * Math.Clamp(zc, 0, 1);
+                Color col = (i + j) % 2 == 0
+                    ? Color.FromRgb((byte)(230 * shade), (byte)(20 * shade), (byte)(30 * shade))
+                    : Color.FromRgb((byte)(255 * shade), (byte)(255 * shade), (byte)(255 * shade));
+                var geo = new StreamGeometry();
+                using (StreamGeometryContext g = geo.Open())
+                {
+                    g.BeginFigure(a.P, true);
+                    g.LineTo(b.P); g.LineTo(cc.P); g.LineTo(d.P);
+                    g.EndFigure(true);
+                }
+                // a hairline in the same colour hides the seams between checks
+                ctx.DrawGeometry(B(col), new ImmutablePen(new ImmutableSolidColorBrush(col), 1), geo);
+            }
+        }
     }
 }

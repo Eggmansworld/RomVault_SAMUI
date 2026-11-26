@@ -153,7 +153,7 @@
                  OUTPUT: full width. Vector objects + stars behind the list.
                  ================================================================ -->
             <Panel Grid.Row="3">
-                <fx:VectorBackdrop/>
+                <fx:VectorBackdrop AllowBoing="True"/>
 
                 <DataGrid x:Name="FilesGrid" ItemsSource="{Binding Files}"
                           IsReadOnly="True"

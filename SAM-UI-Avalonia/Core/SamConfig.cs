@@ -41,6 +41,7 @@ public sealed class SamConfig
     public bool ShowBalls { get; set; } = true;
     public bool ShowFloor { get; set; } = true;
     public int BallCount { get; set; } = 24;
+    public int StarCount { get; set; } = 180;
 
     // --- jukebox
     /// <summary>Start the default tune when the app opens.</summary>
