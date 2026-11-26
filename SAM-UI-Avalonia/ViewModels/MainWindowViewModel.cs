@@ -73,8 +73,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Design.IsDesignMode)
             return;
 
-        int procc = cfg.ThreadCount <= 0 ? MaxThreadCount : Math.Min(cfg.ThreadCount, MaxThreadCount);
-        ThreadCount = procc;
+        ThreadCount = DefaultThreadsClamped;
 
         MainQueue.BusyChanged += OnQueueBusyChanged;
         IsRunning = MainQueue.IsBusy;
@@ -99,11 +98,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int _threadCount = 1;
 
+    /// <summary>Not saved by itself: threads are part of the user's defaults (★ SAVE AS DEFAULT).</summary>
     partial void OnThreadCountChanged(int value)
     {
         ThreadCountChanged(value);
-        _cfg.ThreadCount = value;
-        _cfg.Save();
+        RefreshDefaults();
     }
 
     private void ThreadCountChanged(int value)
@@ -179,6 +178,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsSpinning))]
     [NotifyPropertyChangedFor(nameof(StateText))]
     [NotifyPropertyChangedFor(nameof(StartButtonText))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
     private bool _isRunning;
 
     [ObservableProperty]
@@ -193,6 +193,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(PauseCommand))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyPropertyChangedFor(nameof(StateText))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
     private bool _isSoftStopping;
 
     /// <summary>True while a PREVIEW or START scan is walking the folders.</summary>
@@ -201,12 +202,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
     [NotifyPropertyChangedFor(nameof(StateText))]
     [NotifyPropertyChangedFor(nameof(IsSpinning))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
     private bool _isScanning;
 
     /// <summary>The busy spinner turns while work runs (or a scan) and freezes while paused.</summary>
     public bool IsSpinning => (IsRunning && !IsPaused) || IsScanning;
 
     public string PauseButtonText => IsPaused ? "RESUME" : "PAUSE";
+
+    /// <summary>Something is staged and START would begin a new job: the START button pulses.</summary>
+    public bool IsReadyToStart => HasStaged && !IsRunning && !IsScanning && !IsSoftStopping;
 
     public string StartButtonText => IsRunning ? "ADD TO QUEUE" : "START";
 
@@ -275,6 +280,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
     [NotifyCanExecuteChangedFor(nameof(ClearCommand))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
     private string _pathText = "";
 
     public bool HasStaged => StagedPaths().Count > 0;
@@ -589,17 +595,20 @@ public partial class MainWindowViewModel : ViewModelBase
         ? "REPAIR (keep original format)"
         : OutputTypes.First(t => t.Value == SelectedOutputType).Display;
 
-    /// <summary>True when IN/OUT differ from the saved defaults (shown as a warning).</summary>
-    public bool IsOffDefault => SelectedInputType != _cfg.DefaultInput || SelectedOutputType != _cfg.DefaultOutput;
+    private int DefaultThreadsClamped => Math.Clamp(_cfg.DefaultThreads, 1, MaxThreadCount);
+
+    /// <summary>True when IN/OUT/THREADS differ from the saved defaults (shown as a warning).</summary>
+    public bool IsOffDefault =>
+        SelectedInputType != _cfg.DefaultInput || SelectedOutputType != _cfg.DefaultOutput || ThreadCount != DefaultThreadsClamped;
 
     public string DefaultsHint
     {
         get
         {
-            string d = $"{EnumOption<InputZipType>.Describe(_cfg.DefaultInput)} -> {EnumOption<OutputType>.Describe(_cfg.DefaultOutput)}";
+            string d = $"IN {EnumOption<InputZipType>.Describe(_cfg.DefaultInput)}  ->  OUT {EnumOption<OutputType>.Describe(_cfg.DefaultOutput)}  ·  {DefaultThreadsClamped} thread(s)";
             return IsOffDefault
-                ? $"!! NOT YOUR DEFAULT ({d}) - resets on next launch"
-                : $"default: {d}";
+                ? $"!! NOT YOUR DEFAULT - yours is: {d}. This resets on next launch unless you save it."
+                : $"Your default: {d}";
         }
     }
 
@@ -608,9 +617,10 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _cfg.DefaultInput = SelectedInputType;
         _cfg.DefaultOutput = SelectedOutputType;
+        _cfg.DefaultThreads = ThreadCount;
         _cfg.Save();
         RefreshDefaults();
-        Message = $"Saved as default: {InputName} -> {OutputName}. SAM-UI always starts on these.";
+        Message = $"Saved as default: {InputName} -> {OutputName}, {ThreadCount} thread(s). SAM-UI always starts on these.";
     }
 
     [RelayCommand(CanExecute = nameof(IsOffDefault))]
@@ -618,6 +628,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         SelectedInputType = _cfg.DefaultInput;
         SelectedOutputType = _cfg.DefaultOutput;
+        ThreadCount = DefaultThreadsClamped;
     }
 
     private void RefreshDefaults()
@@ -670,6 +681,73 @@ public partial class MainWindowViewModel : ViewModelBase
         VectorBackdrop.Mode = value;
         _cfg.Shape = value;
         _cfg.Save();
+    }
+
+    // ---- layers (SETUP window)
+
+    public bool ShowScroller
+    {
+        get => _cfg.ShowScroller;
+        set { _cfg.ShowScroller = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public bool ShowCopper
+    {
+        get => _cfg.ShowCopper;
+        set { _cfg.ShowCopper = FxSettings.Copper = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public bool ShowStarfield
+    {
+        get => _cfg.ShowStarfield;
+        set { _cfg.ShowStarfield = FxSettings.Starfield = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public bool ShowObjects
+    {
+        get => _cfg.ShowObjects;
+        set { _cfg.ShowObjects = FxSettings.Objects = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public bool ShowBalls
+    {
+        get => _cfg.ShowBalls;
+        set { _cfg.ShowBalls = FxSettings.Balls = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public bool ShowFloor
+    {
+        get => _cfg.ShowFloor;
+        set { _cfg.ShowFloor = FxSettings.Floor = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    public int MinBalls => FxSettings.MinBalls;
+    public int MaxBalls => FxSettings.MaxBalls;
+
+    public int BallCount
+    {
+        get => FxSettings.BallCount;
+        set
+        {
+            FxSettings.BallCount = value;
+            _cfg.BallCount = FxSettings.BallCount;
+            _cfg.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>The + / - easter egg on the main window.</summary>
+    public void NudgeBalls(int delta)
+    {
+        if (!ShowBalls) ShowBalls = true;
+        BallCount += delta;
+        Message = $"VECTOR BALLS: {BallCount}   (+ / - for more or less)";
+    }
+
+    public bool AutoPlayMusic
+    {
+        get => _cfg.AutoPlayMusic;
+        set { _cfg.AutoPlayMusic = value; _cfg.Save(); OnPropertyChanged(); }
     }
 
     public string ScrollText { get; } =

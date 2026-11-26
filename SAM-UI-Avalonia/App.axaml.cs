@@ -6,6 +6,9 @@ using SAM_UI_Avalonia.Core;
 using SAM_UI_Avalonia.Fx;
 using SAM_UI_Avalonia.ViewModels;
 using SAM_UI_Avalonia.Views;
+using System;
+using System.IO;
+using System.Linq;
 
 namespace SAM_UI_Avalonia
 {
@@ -28,8 +31,22 @@ namespace SAM_UI_Avalonia
                 FxClock.Enabled = Config.Effects;
                 VectorBackdrop.Mode = Config.Shape;
 
+                FxSettings.Load(Config);
+
                 Jukebox = new Jukebox(Config);
                 VuMeter.LevelSource = () => Jukebox.Level;
+
+                // Taskbar right-click: "Pause music" / "Next tune".
+                if (OperatingSystem.IsWindows())
+                {
+                    JumpList.Update(false);
+                    Jukebox.PlayingChanged += playing => { if (OperatingSystem.IsWindows()) JumpList.Update(playing); };
+                }
+                InstanceChannel.Listen(cmd => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (cmd == "jukebox toggle") Jukebox.TogglePlay();
+                    else if (cmd == "jukebox next") Jukebox.Next();
+                }));
 
                 var vm = new MainWindowViewModel(Config);
                 desktop.MainWindow = new MainWindow { DataContext = vm };

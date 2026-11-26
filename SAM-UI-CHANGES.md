@@ -1,5 +1,19 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.2.0 – 2026-11-26
+| Area | Change |
+|------|--------|
+| Jukebox | Auto-plays "echoing (banana)" at start-up (SETUP can switch this off). Volume is remembered; it defaults to 50%. |
+| Taskbar | Right-click the SAM-UI taskbar button for **Pause music / Play music** and **Next tune** (Windows jump list). These work while SAM-UI is minimised. |
+| 3D | The object now drifts around the whole screen. New objects: GLENZ CUBE (see-through faces), TESSERACT (rotating 4D hypercube), DODECAHEDRON, DNA HELIX. |
+| Vector balls | Shaded balls in 3D formations (sphere, ring, cube lattice, helix, ripple sheet, crossed rings) that morph every 8 s while the group bounces and drifts, with floor shadows. Written from scratch, inspired by classic Amiga intros. Ball count (1 to 128) is set in SETUP. |
+| Floor | A scrolling wireframe floor under the starfield fades in and out over a 60-second cycle. |
+| Window | Opens at 1680×1050 (shrunk to fit smaller screens), centred in the primary screen's work area so it clears the taskbar. Size and maximised state are saved. If the window ends up off every connected screen (monitor unplugged or switched off, display change), it's moved back to the primary screen within 2 seconds. |
+| START | Pulses while something is staged and ready to run. |
+| Defaults | Threads are now part of the saved default (★ SAVE AS DEFAULT saves IN, OUT and THREADS). The app default is 2 threads. The default note has its own line and is no longer cut off. |
+| SETUP (F2) | New popup with theme, 3D object, animated effects, and layer switches for copper bars, sine scroller, starfield, 3D objects, vector balls, wireframe floor and CRT scanlines. Also the ball count and music auto-play. The theme controls are gone from the main window. |
+| Tunes | 21 bundled tunes (adds "Demons are Forever (FROG).mod"). |
+
 ## v1.1.0 – 2026-11-26 – rebased on current upstream
 - Whole tree now matches RomVault RVWorld `329823a` (2026-11-03), including upstream's reworked
   SAM/TrrntZip backend (merged PR #36). Only SAM-UI-Avalonia differs from upstream.

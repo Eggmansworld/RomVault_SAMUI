@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SAM_UI_Avalonia.ViewModels"
+        xmlns:fx="using:SAM_UI_Avalonia.Fx"
+        x:Class="SAM_UI_Avalonia.Views.SetupWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="SAM-UI // SETUP"
+        Width="560" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <Panel>
+        <fx:VectorBackdrop Opacity="0.55"/>
+        <StackPanel Margin="22,16,22,18" Spacing="10">
+            <TextBlock Classes="h" FontSize="16" Text="══[ SETUP ]══" HorizontalAlignment="Center"/>
+
+            <!-- look -->
+            <Border Classes="panel" Padding="14,10">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="h" Text="░▒▓ LOOK"/>
+                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                        <TextBlock Classes="lbl" Text="THEME ►"/>
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"/>
+                        <TextBlock Grid.Row="1" Classes="lbl" Text="3D OBJECT ►"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding ShapeNames}" SelectedItem="{Binding SelectedShape}"
+                                  ToolTip.Tip="AUTO cycles through every object"/>
+                    </Grid>
+                    <CheckBox Content="ANiMATED EFFECTS  (off = one still frame, zero CPU)" IsChecked="{Binding EffectsOn}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- layers -->
+            <Border Classes="panel" Padding="14,10">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h" Text="░▒▓ LAYERS"/>
+                    <UniformGrid Columns="2">
+                        <CheckBox Content="COPPER BARS" IsChecked="{Binding ShowCopper}"/>
+                        <CheckBox Content="SiNE SCROLLER" IsChecked="{Binding ShowScroller}"/>
+                        <CheckBox Content="STARFiELD" IsChecked="{Binding ShowStarfield}"/>
+                        <CheckBox Content="3D OBJECTS" IsChecked="{Binding ShowObjects}"/>
+                        <CheckBox Content="VECTOR BALLS" IsChecked="{Binding ShowBalls}"/>
+                        <CheckBox Content="WiREFRAME FLOOR" IsChecked="{Binding ShowFloor}"
+                                  ToolTip.Tip="Fades in and out over a minute"/>
+                        <CheckBox Content="CRT SCANLiNES" IsChecked="{Binding ScanlinesOn}"/>
+                    </UniformGrid>
+                    <Grid ColumnDefinitions="110,*,44" Margin="0,4,0,0" IsEnabled="{Binding ShowBalls}">
+                        <TextBlock Classes="lbl" Text="BALLS ►"/>
+                        <Slider Grid.Column="1" Minimum="{Binding MinBalls}" Maximum="{Binding MaxBalls}" TickFrequency="1"
+                                IsSnapToTickEnabled="True" Value="{Binding BallCount}" Margin="0,-10" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text="{Binding BallCount}" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- music -->
+            <Border Classes="panel" Padding="14,10">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h" Text="░▒▓ JUKEBOX"/>
+                    <CheckBox Content="AUTO-PLAY MUSIC WHEN SAM-UI STARTS" IsChecked="{Binding AutoPlayMusic}"/>
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                               Text="Volume is remembered. Right-click SAM-UI on the taskbar to pause music or skip a tune."/>
+                </StackPanel>
+            </Border>
+
+            <Button Classes="kg" Content="CLOSE" HorizontalAlignment="Center" MinWidth="120" Click="Close_Click" IsDefault="True" IsCancel="True"/>
+        </StackPanel>
+        <fx:Scanlines IsVisible="{Binding ScanlinesOn}"/>
+    </Panel>
+</Window>

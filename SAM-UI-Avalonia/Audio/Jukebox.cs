@@ -86,6 +86,15 @@ public sealed class Jukebox
         Changed?.Invoke();
     }
 
+    /// <summary>Auto-play at start-up: always the default tune ("echoing (banana)").</summary>
+    public void PlayDefault()
+    {
+        if (!Available) return;
+        string def = Path.Combine(TunesFolder, DefaultTune);
+        if (File.Exists(def)) Open(def);
+        else if (Current != null) StartCurrent(forcePlay: true);
+    }
+
     public bool IsTune(string f) => Extensions.Contains(Path.GetExtension(f));
 
     private void LoadFolder(string file, int sub)
@@ -165,6 +174,17 @@ public sealed class Jukebox
 
     public void Shutdown() => _out.Stop();
 
+    /// <summary>Raised when play/pause state changes (for the taskbar jump list).</summary>
+    public event Action<bool>? PlayingChanged;
+    private bool _lastPlaying;
+
+    private void RaisePlaying()
+    {
+        if (_lastPlaying == _cfg.JukeboxEnabled) return;
+        _lastPlaying = _cfg.JukeboxEnabled;
+        PlayingChanged?.Invoke(_lastPlaying);
+    }
+
     // ------------------------------------------------------------------ transport
 
     public void TogglePlay()
@@ -177,6 +197,7 @@ public sealed class Jukebox
             else StartCurrent();
         }
         else _out.FadeOutAndPause(0.3);
+        RaisePlaying();
         Changed?.Invoke();
     }
 
@@ -284,6 +305,7 @@ public sealed class Jukebox
         finally
         {
             _loading = false;
+            RaisePlaying();
             Changed?.Invoke();
         }
     }

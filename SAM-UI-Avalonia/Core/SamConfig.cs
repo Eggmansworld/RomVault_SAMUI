@@ -14,23 +14,41 @@ namespace SAM_UI_Avalonia.Core;
 /// </summary>
 public sealed class SamConfig
 {
-    // --- processing
+    /// <summary>Bumped when a new release changes a default that should replace old saved values.</summary>
+    public int ConfigVersion { get; set; }
+    private const int CurrentVersion = 2;
+
+    // --- processing (the user's saved defaults; the app always starts on these)
     public InputZipType DefaultInput { get; set; } = InputZipType.Zip;
     public OutputType DefaultOutput { get; set; } = OutputType.ZipTorrent;
-    /// <summary>Files processed at once. 0 = pick automatically.</summary>
-    public int ThreadCount { get; set; }
+    /// <summary>Files processed at once. 2 is a safe start; the user can save another default.</summary>
+    public int DefaultThreads { get; set; } = 2;
+
+    // --- window (size in device-independent pixels; always opens centred on the primary screen)
+    public double WindowWidth { get; set; } = 1680;
+    public double WindowHeight { get; set; } = 1050;
+    public bool WindowMaximized { get; set; }
 
     // --- look
     public string Theme { get; set; } = Fx.Skin.All[0].Name;
     public bool Effects { get; set; } = true;
     public bool Scanlines { get; set; } = true;
     public string Shape { get; set; } = "AUTO";
+    public bool ShowScroller { get; set; } = true;
+    public bool ShowStarfield { get; set; } = true;
+    public bool ShowObjects { get; set; } = true;
+    public bool ShowCopper { get; set; } = true;
+    public bool ShowBalls { get; set; } = true;
+    public bool ShowFloor { get; set; } = true;
+    public int BallCount { get; set; } = 24;
 
     // --- jukebox
+    /// <summary>Start the default tune when the app opens.</summary>
+    public bool AutoPlayMusic { get; set; } = true;
     public bool JukeboxEnabled { get; set; }
     public string? JukeboxTune { get; set; }
     public int JukeboxSub { get; set; }
-    public int JukeboxVolume { get; set; } = 55;
+    public int JukeboxVolume { get; set; } = 50;
     public int SidSeconds { get; set; } = 180;
     public bool JukeboxShuffle { get; set; }
     /// <summary>Per SID file name (lower case): subtunes to play. Missing = all music subtunes.</summary>
@@ -52,13 +70,22 @@ public sealed class SamConfig
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<SamConfig>(File.ReadAllText(FilePath), Json) ?? new SamConfig();
+            {
+                SamConfig cfg = JsonSerializer.Deserialize<SamConfig>(File.ReadAllText(FilePath), Json) ?? new SamConfig();
+                if (cfg.ConfigVersion < 2)
+                {
+                    cfg.JukeboxVolume = 50; // v1.2 default: half volume
+                    cfg.DefaultThreads = 2;
+                }
+                cfg.ConfigVersion = CurrentVersion;
+                return cfg;
+            }
         }
         catch (Exception ex)
         {
             Log.Warn("Settings file unreadable, using defaults: " + ex.Message);
         }
-        return new SamConfig();
+        return new SamConfig { ConfigVersion = CurrentVersion };
     }
 
     public void Save()

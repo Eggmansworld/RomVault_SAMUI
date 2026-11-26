@@ -107,13 +107,15 @@ $@"  ░▒▓ RELEASE iNFO ▓▒░
     CTRL+O  pick files          CTRL+D      pick folders
     F5      preview             CTRL+ENTER  start
     PAUSE   pause / resume      F1          this NFO
+    F2      SETUP (themes, effects, music)
     ENTER in the PATH box = preview
 
   ░▒▓ JUKEBOX ▓▒░
 
     Plays MOD / S3M / XM / IT (via libopenmpt) and C64 SID tunes while
-    you crunch. Starts silent - press  >  to play. Keeps playing when
-    minimised. Add your own tunes to the Tunes folder (TUNES DiR), or
+    you crunch. Auto-plays at start-up (switch off in SETUP). Keeps playing
+    when minimised - right-click SAM-UI on the taskbar to pause or skip.
+    Add your own tunes to the Tunes folder (TUNES DiR), or
     grab more at modarchive.org.
 
     Bundled tunes - all credit to the original artists:

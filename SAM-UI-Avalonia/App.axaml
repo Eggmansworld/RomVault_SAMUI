@@ -123,6 +123,24 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SamAccent}"/>
         </Style>
 
+        <!-- START pulses while something is staged and ready to go -->
+        <Style Selector="Button.go.ready">
+            <Style.Animations>
+                <Animation Duration="0:0:0.9" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="1"/>
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.45"/>
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="Button.go.ready /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SamAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamBg}"/>
+        </Style>
+
         <!-- PAUSE = orange, SOFT STOP = yellow, HARD STOP = red -->
         <Style Selector="Button.pause">
             <Setter Property="BorderBrush" Value="{StaticResource SamPauseBrush}"/>

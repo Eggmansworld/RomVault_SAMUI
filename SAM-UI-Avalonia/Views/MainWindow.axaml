@@ -9,9 +9,9 @@
         x:Class="SAM_UI_Avalonia.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/SAMUI.ico"
-        Width="1280" Height="820"
-        MinWidth="1020" MinHeight="620"
-        WindowStartupLocation="CenterScreen"
+        Width="1680" Height="1050"
+        MinWidth="1180" MinHeight="640"
+        WindowStartupLocation="Manual"
         DragDrop.AllowDrop="True"
         Title="SAM-UI  //  Eggman Edition">
 
@@ -82,74 +82,72 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- formats -->
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                    <!-- formats + run controls -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Classes="lbl" Text="IN ►" Width="62"/>
-                        <ComboBox Grid.Column="1" Width="150"
+                        <ComboBox Grid.Column="1" Width="130"
                                   Classes.offdefault="{Binding IsOffDefault}"
                                   ItemsSource="{Binding InputTypes}"
                                   SelectedValue="{Binding SelectedInputType}"
                                   SelectedValueBinding="{Binding Value}"
                                   DisplayMemberBinding="{Binding Display}"
                                   ToolTip.Tip="Which files to pick up from the staged folders"/>
-                        <TextBlock Grid.Column="2" Classes="lbl" Text="OUT ►" Margin="6,0,0,0"/>
-                        <ComboBox Grid.Column="3" Width="190"
+                        <TextBlock Grid.Column="2" Classes="lbl" Text="OUT ►" Margin="4,0,0,0"/>
+                        <ComboBox Grid.Column="3" Width="175"
                                   Classes.offdefault="{Binding IsOffDefault}"
                                   ItemsSource="{Binding OutputTypes}"
                                   SelectedValue="{Binding SelectedOutputType}"
                                   SelectedValueBinding="{Binding Value}"
                                   DisplayMemberBinding="{Binding Display}"
                                   ToolTip.Tip="The archive format to produce"/>
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
-                            <Button Classes="kg small" Content="★ SAVE AS DEFAULT" Command="{Binding SaveDefaultsCommand}"
-                                    ToolTip.Tip="SAM-UI always starts on your default IN/OUT. Changes you make without saving last only until you close it."/>
-                            <Button Classes="kg small" Content="↺ BACK TO DEFAULT" Command="{Binding ResetDefaultsCommand}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="5" Text="{Binding DefaultsHint}" Margin="6,0,0,0" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" FontSize="11"
-                                   Classes.warn="{Binding IsOffDefault}" Classes.dim="{Binding !IsOffDefault}"/>
-                        <CheckBox Grid.Column="6" Content="DRY RUN" IsChecked="{Binding IsDryRun}"
-                                  ToolTip.Tip="Check only - nothing is written. Always off when SAM-UI starts."/>
-                        <TextBlock Grid.Column="7" Classes="lbl" Text="THREADS ►" Margin="8,0,0,0"/>
-                        <Slider Grid.Column="8" Width="130" Minimum="1" Maximum="{Binding MaxThreadCount}" TickFrequency="1"
+                        <TextBlock Grid.Column="4" Classes="lbl" Text="THREADS ►" Margin="4,0,0,0"/>
+                        <Slider Grid.Column="5" Width="110" Minimum="1" Maximum="{Binding MaxThreadCount}" TickFrequency="1"
                                 IsSnapToTickEnabled="True" Value="{Binding ThreadCount}" Margin="0,-10"
                                 VerticalAlignment="Center" ToolTip.Tip="{Binding ThreadCapText}"/>
-                        <TextBlock Grid.Column="9" VerticalAlignment="Center" FontWeight="Bold" MinWidth="44"
+                        <TextBlock Grid.Column="6" VerticalAlignment="Center" FontWeight="Bold" MinWidth="44"
                                    ToolTip.Tip="{Binding ThreadCapText}">
                             <Run Text="{Binding ThreadCount}"/><Run Text="/" Foreground="{DynamicResource SamDim}"/><Run Text="{Binding MaxThreadCount}" Foreground="{DynamicResource SamDim}"/>
                         </TextBlock>
-                    </Grid>
+                        <CheckBox Grid.Column="7" Content="DRY RUN" IsChecked="{Binding IsDryRun}"
+                                  ToolTip.Tip="Check only - nothing is written. Always off when SAM-UI starts."/>
 
-                    <!-- look + run controls -->
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0" Classes="lbl" Text="THEME ►" Width="62"/>
-                        <ComboBox Grid.Column="1" Width="190" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"/>
-                        <TextBlock Grid.Column="2" Classes="lbl" Text="3D ►" Margin="6,0,0,0"/>
-                        <ComboBox Grid.Column="3" Width="130" ItemsSource="{Binding ShapeNames}" SelectedItem="{Binding SelectedShape}"
-                                  ToolTip.Tip="Vector object behind the output list"/>
-                        <CheckBox Grid.Column="4" Content="FX" IsChecked="{Binding EffectsOn}" ToolTip.Tip="Animated effects on/off (off = still frame, zero CPU)"/>
-                        <CheckBox Grid.Column="5" Content="CRT" IsChecked="{Binding ScanlinesOn}" ToolTip.Tip="CRT scanlines"/>
-                        <Button Grid.Column="6" Classes="kg small" Content="NFO" Click="Nfo_Click" ToolTip.Tip="About / help (F1)"/>
-
-                        <Button Grid.Column="8" Classes="kg" Content="PREVIEW" Command="{Binding PreviewCommand}" MinWidth="90"
+                        <Button Grid.Column="9" Classes="kg" Content="PREVIEW" Command="{Binding PreviewCommand}" MinWidth="90"
                                 ToolTip.Tip="List what would be processed, with sizes, without starting (F5)"/>
-                        <Button Grid.Column="9" Classes="kg go" Content="{Binding StartButtonText}" Command="{Binding StartCommand}" MinWidth="130"
+                        <Button Grid.Column="10" Classes="kg go" Classes.ready="{Binding IsReadyToStart}"
+                                Content="{Binding StartButtonText}" Command="{Binding StartCommand}" MinWidth="130"
                                 ToolTip.Tip="Process the staged items (Ctrl+Enter). While running, adds them to the queue."/>
-                        <Border Grid.Column="10" Width="2" Background="{DynamicResource SamBorder}" Margin="4,2"/>
-                        <Button Grid.Column="11" Classes="kg pause" Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" MinWidth="90"
+                        <Border Grid.Column="11" Width="2" Background="{DynamicResource SamBorder}" Margin="4,2"/>
+                        <Button Grid.Column="12" Classes="kg pause" Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" MinWidth="90"
                                 ToolTip.Tip="Pause / resume all processing (Pause key)"/>
-                        <StackPanel Grid.Column="12" Orientation="Horizontal" Spacing="4">
+                        <StackPanel Grid.Column="13" Orientation="Horizontal" Spacing="4">
                             <Button Classes="kg soft" Content="SOFT STOP" Command="{Binding SoftStopCommand}"
                                     ToolTip.Tip="Finish the files currently being processed, then stop. Queued files are skipped."/>
                             <Button Classes="kg hard" Content="HARD STOP" Command="{Binding HardStopCommand}"
                                     ToolTip.Tip="Stop immediately. Files in progress are abandoned (originals are left unchanged)."/>
                         </StackPanel>
                     </Grid>
+
+                    <!-- defaults (full line so it can always be read) + setup -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="lbl" Text="DEFAULT ►" Width="62" FontSize="10"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="kg small" Content="★ SAVE AS DEFAULT" Command="{Binding SaveDefaultsCommand}"
+                                    ToolTip.Tip="SAM-UI always starts on your default IN / OUT / THREADS. Changes you don't save last only until you close it."/>
+                            <Button Classes="kg small" Content="↺ BACK TO DEFAULT" Command="{Binding ResetDefaultsCommand}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding DefaultsHint}" Margin="6,0,0,0" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" FontSize="12"
+                                   Classes.warn="{Binding IsOffDefault}" Classes.dim="{Binding !IsOffDefault}"/>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="kg small" Content="SETUP" Click="Setup_Click" ToolTip.Tip="Theme, effects and music options (F2)"/>
+                            <Button Classes="kg small" Content="NFO" Click="Nfo_Click" ToolTip.Tip="About / help (F1)"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
             </Border>
 
             <!-- ===== raster bar ===== -->
-            <fx:CopperRule Grid.Row="2"/>
+            <fx:CopperRule Grid.Row="2" IsVisible="{Binding ShowCopper}"/>
 
             <!-- ================================================================
                  OUTPUT: full width. Vector objects + stars behind the list.
@@ -226,7 +224,7 @@
                             IsHitTestVisible="False" Margin="0,26,0,0" Spacing="10">
                     <TextBlock x:Name="AnsiLogo" FontFamily="{StaticResource Mono}" FontSize="14"
                                Foreground="{DynamicResource SamAnsiBrush}" HorizontalAlignment="Center"/>
-                    <TextBlock x:Name="AnsiHowTo" FontFamily="{StaticResource Mono}" FontSize="13" LineHeight="19"
+                    <TextBlock x:Name="AnsiHowTo" Background="#D0000000" Padding="10,6" FontFamily="{StaticResource Mono}" FontSize="13" LineHeight="19"
                                Foreground="{DynamicResource SamText}" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Panel>
@@ -238,7 +236,7 @@
                 <StackPanel>
                     <ProgressBar Minimum="0" Maximum="100" Value="{Binding OverallPercent}" Height="5" MinHeight="5"
                                  Foreground="{DynamicResource SamAccent}"/>
-                    <fx:SineScroller Height="30" Text="{Binding ScrollText}"/>
+                    <fx:SineScroller Height="30" Text="{Binding ScrollText}" IsVisible="{Binding ShowScroller}"/>
                     <Border Height="1" Background="{DynamicResource SamBorder}" Opacity="0.5"/>
                     <TextBlock Text="{Binding Message}" Margin="10,4,10,0" FontSize="12"
                                Foreground="{DynamicResource SamAccent2}" TextTrimming="CharacterEllipsis"

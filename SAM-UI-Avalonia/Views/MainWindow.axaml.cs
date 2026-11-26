@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using SAM_UI_Avalonia.Audio;
@@ -51,14 +52,99 @@ public partial class MainWindow : Window
         });
         _scrollTimer.Start();
 
-        // jukebox
         if (Design.IsDesignMode) return;
+
+        // size + placement: always on the primary screen, never off-screen
+        PlaceWindow();
+        Opened += (_, _) =>
+        {
+            if (App.Config.WindowMaximized) WindowState = WindowState.Maximized;
+            EnsureOnScreen();
+        };
+        Screens.Changed += (_, _) => Dispatcher.UIThread.Post(EnsureOnScreen, DispatcherPriority.Background);
+        _screenTimer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) =>
+        {
+            // also catches "monitor switched off / unplugged" when Windows doesn't tell us
+            EnsureOnScreen();
+        });
+        _screenTimer.Start();
+
+        // jukebox
         Jukebox jb = App.Jukebox;
         JbVolume.Value = App.Config.JukeboxVolume;
         JbVolume.ValueChanged += (_, _) => jb.SetVolume((int)JbVolume.Value);
         jb.Changed += UpdateJukebox;
-        Opened += (_, _) => { jb.Init(); UpdateJukebox(); };
+        Opened += (_, _) =>
+        {
+            jb.Init();
+            UpdateJukebox();
+            if (App.Config.AutoPlayMusic) jb.PlayDefault();
+        };
     }
+
+    // =================================================================== placement
+
+    private readonly DispatcherTimer? _screenTimer;
+    private const double TitleBarAllowance = 40; // window frame + title bar, in DIPs
+
+    /// <summary>Saved size (default 1680x1050), shrunk to fit, centred in the primary screen's work area.</summary>
+    private void PlaceWindow()
+    {
+        Screen? scr = Screens.Primary ?? Screens.All.FirstOrDefault();
+        if (scr == null) return;
+        FitAndCenter(scr, App.Config.WindowWidth, App.Config.WindowHeight);
+    }
+
+    private void FitAndCenter(Screen scr, double wantW, double wantH)
+    {
+        double s = scr.Scaling;
+        PixelRect wa = scr.WorkingArea; // excludes the taskbar
+        double maxW = wa.Width / s, maxH = wa.Height / s - TitleBarAllowance;
+        Width = Math.Max(Math.Min(wantW, maxW), Math.Min(MinWidth, maxW));
+        Height = Math.Max(Math.Min(wantH, maxH), Math.Min(MinHeight, maxH));
+        int pw = (int)(Width * s), ph = (int)((Height + TitleBarAllowance) * s);
+        Position = new PixelPoint(wa.X + Math.Max(0, (wa.Width - pw) / 2), wa.Y + Math.Max(0, (wa.Height - ph) / 2));
+    }
+
+    /// <summary>
+    /// If the title bar isn't on any connected screen (a monitor was unplugged, switched off or
+    /// Windows lost track), bring the window back to the centre of the primary screen.
+    /// </summary>
+    private void EnsureOnScreen()
+    {
+        if (WindowState == WindowState.Minimized || !IsVisible) return;
+        IReadOnlyList<Screen> all = Screens.All;
+        if (all.Count == 0) return;
+
+        double s = DesktopScaling;
+        var titleBar = new PixelRect(Position.X, Position.Y, Math.Max(1, (int)(Bounds.Width * s)), (int)(TitleBarAllowance * s));
+        bool visible = all.Any(sc =>
+        {
+            PixelRect i = sc.WorkingArea.Intersect(titleBar);
+            return i.Width >= 150 * s && i.Height >= 8;
+        });
+        if (visible) return;
+
+        Screen target = Screens.Primary ?? all[0];
+        WindowState = WindowState.Normal;
+        FitAndCenter(target, App.Config.WindowWidth, App.Config.WindowHeight);
+        if (_vm != null) _vm.Message = "SAM-UI was off-screen (display change) - moved back to your main screen.";
+    }
+
+    /// <summary>Remember the size the user picks (normal state only) and whether it's maximised.</summary>
+    private void RememberSize()
+    {
+        if (Design.IsDesignMode) return;
+        if (WindowState == WindowState.Normal && Width > 0 && Height > 0)
+        {
+            App.Config.WindowWidth = Math.Round(Width);
+            App.Config.WindowHeight = Math.Round(Height);
+        }
+        if (WindowState != WindowState.Minimized)
+            App.Config.WindowMaximized = WindowState == WindowState.Maximized;
+    }
+
+    private void Setup_Click(object? sender, RoutedEventArgs e) => new SetupWindow { DataContext = DataContext }.ShowDialog(this);
 
     // =================================================================== view model hookup
 
@@ -113,7 +199,14 @@ public partial class MainWindow : Window
     {
         base.OnPropertyChanged(change);
         if (change.Property == WindowStateProperty)
+        {
             FxClock.Suspended = WindowState == WindowState.Minimized; // music keeps playing, effects rest
+            RememberSize();
+            if (WindowState != WindowState.Minimized)
+                Dispatcher.UIThread.Post(EnsureOnScreen, DispatcherPriority.Background);
+        }
+        else if (change.Property == ClientSizeProperty)
+            RememberSize();
     }
 
     /// <summary>
@@ -129,6 +222,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        RememberSize();
+        App.Config.Save();
         Workers.RemoveAllWorks();
     }
 
@@ -144,6 +239,10 @@ public partial class MainWindow : Window
             case Key.F5: if (_vm.PreviewCommand.CanExecute(null)) _vm.PreviewCommand.Execute(null); break;
             case Key.Pause: if (_vm.PauseCommand.CanExecute(null)) _vm.PauseCommand.Execute(null); break;
             case Key.F1: Nfo_Click(this, new RoutedEventArgs()); break;
+            case Key.F2: Setup_Click(this, new RoutedEventArgs()); break;
+            // easter egg: more / fewer vector balls (not while typing in a text box)
+            case Key.OemPlus or Key.Add when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 8 : 1); break;
+            case Key.OemMinus or Key.Subtract when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -8 : -1); break;
             default: return;
         }
         e.Handled = true;
