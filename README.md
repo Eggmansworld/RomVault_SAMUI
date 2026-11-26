@@ -52,6 +52,8 @@ zip/7z archives into TorrentZip, Zip-ZSTD, 7Z-ZSTD and 7Z-LZMA, using RomVault's
 - The **NFO (F1)** has the how-to, keyboard shortcuts and credits.
 - Rumour has it the app has a few visitors of its own... keep your eyes open. 👀
 
+<img width="2524" height="1622" alt="image" src="https://github.com/user-attachments/assets/b420c719-0223-4558-8feb-273b96899504" />
+
 ### Jukebox
 - Plays **MOD / S3M / XM / IT** (via libopenmpt) and **C64 SID** tunes while you crunch. **25 handpicked tunes** are bundled; drop more into the `Tunes` folder (**TUNES DiR**) or grab them at modarchive.org (**GET MORE MUSiC**).
 - **Auto-plays** at start-up (switch in SETUP). First run starts with "God = Martin Galway". After that it carries on with the song that was playing when you closed it, or a **START SONG** you choose in SETUP.
