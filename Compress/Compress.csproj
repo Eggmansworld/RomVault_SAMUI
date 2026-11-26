@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release</Configurations>
+    <Platforms>X64;AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Libraries\CodePage\CodePage.csproj" />
+    <ProjectReference Include="..\Libraries\RVIO\RVIO.csproj" />
+    <ProjectReference Include="..\Libraries\RVZstdSharp\RVZstdSharp.csproj" />
+    <ProjectReference Include="..\Libraries\SortMethods\SortMethods.csproj" />
+  </ItemGroup>
+
+</Project>

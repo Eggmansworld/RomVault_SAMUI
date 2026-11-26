@@ -1,0 +1,83 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/CHD/">
+    <Project Path="CHD/CHDSharpLib/CHDSharpLib.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+  </Folder>
+  <Folder Name="/DAT/">
+    <Project Path="DAT/DATReader/DATReader.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+  </Folder>
+  <Folder Name="/Libraries/">
+    <Project Path="Libraries/CodePage/CodePage.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="Libraries/RVIO/RVIO.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="Libraries/RVUtils/RVUtils.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="Libraries/RVZstdSharp/RVZstdSharp.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="Libraries/SortMethods/SortMethods.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="Libraries/StorageList/StorageList.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+  </Folder>
+  <Folder Name="/SAM/">
+    <Project Path="SAM-UI-Avalonia/SAM-UI-Avalonia.csproj" Id="2583afb1-4cc6-42fe-9216-e4e30ba361a0">
+      <Platform Solution="Debug|x64" Project="x64" />
+    </Project>
+    <Project Path="SAM/TrrntZip/TrrntZip.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="SAM/TrrntZipCMD/TrrntZipCMD.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="SAM/TrrntZipUI/TrrntZipUI.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+    <Project Path="SAM/TrrntZipUICore/TrrntZipUICore.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+  </Folder>
+  <Folder Name="/SupportApps/">
+    <Project Path="SupportApps/RVUnZip/RVUnZip.csproj">
+      <Platform Solution="*|x64" Project="X64" />
+    </Project>
+  </Folder>
+  <Project Path="Compress/Compress.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="Dark/Dark.csproj" Id="80b6f476-6144-40cf-804a-593d429bd874">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="Extensions/Extensions.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="FileScanner/FileScanner.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="ROMVault/ROMVault.csproj">
+    <BuildType Solution="Debug|Any CPU" Project="ReleaseProd" />
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="RomVaultCmd/RomVaultCmd.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="RomVaultCore/RomVaultCore.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+  <Project Path="SharedEnum/SharedEnum.csproj">
+    <Platform Solution="*|x64" Project="X64" />
+  </Project>
+</Solution>

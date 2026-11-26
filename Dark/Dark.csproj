@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFrameworks>net10.0-windows;net48</TargetFrameworks>
+	  <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Dark</RootNamespace>
+    <AssemblyName>Dark</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <Platforms>X64;AnyCPU</Platforms>
+  </PropertyGroup>
+
+</Project>

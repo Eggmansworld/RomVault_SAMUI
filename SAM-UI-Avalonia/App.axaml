@@ -1,0 +1,274 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SAM_UI_Avalonia.App"
+             xmlns:local="using:SAM_UI_Avalonia"
+             RequestedThemeVariant="Dark">
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <!-- Colours come from Fx/Skin.cs (the selected theme pushes Sam* brushes in at runtime).
+         These are only the start-up values for the first theme. -->
+    <Application.Resources>
+        <FontFamily x:Key="Mono">Cascadia Mono, Consolas, Courier New</FontFamily>
+        <SolidColorBrush x:Key="SamBg" Color="#07040F"/>
+        <SolidColorBrush x:Key="SamPanel" Color="#E0110826"/>
+        <SolidColorBrush x:Key="SamBorder" Color="#B13CFF"/>
+        <SolidColorBrush x:Key="SamText" Color="#E8E4FF"/>
+        <SolidColorBrush x:Key="SamDim" Color="#8A80B0"/>
+        <SolidColorBrush x:Key="SamAccent" Color="#FF4FD8"/>
+        <SolidColorBrush x:Key="SamAccent2" Color="#3FE0FF"/>
+        <SolidColorBrush x:Key="SamGood" Color="#5CFF8A"/>
+        <SolidColorBrush x:Key="SamWarn" Color="#FFD84A"/>
+        <SolidColorBrush x:Key="SamBad" Color="#FF4A5A"/>
+        <SolidColorBrush x:Key="SamHover" Color="#3CFF4FD8"/>
+        <SolidColorBrush x:Key="SamSelect" Color="#5A3FE0FF"/>
+        <SolidColorBrush x:Key="SamRowBg" Color="#9607040F"/>
+        <SolidColorBrush x:Key="SamHeaderBg" Color="#EB110826"/>
+        <SolidColorBrush x:Key="SamProgressFill" Color="#80FF4FD8"/>
+        <SolidColorBrush x:Key="SamAnsiBrush" Color="#FF4FD8"/>
+
+        <!-- Fixed "traffic light" colours for the run controls (same in every theme). -->
+        <SolidColorBrush x:Key="SamPauseBrush" Color="#FF8C00"/>
+        <SolidColorBrush x:Key="SamSoftBrush" Color="#FFD400"/>
+        <SolidColorBrush x:Key="SamHardBrush" Color="#FF2A2A"/>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+            <Setter Property="Background" Value="{DynamicResource SamBg}"/>
+        </Style>
+
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource SamPanel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+
+        <Style Selector="TextBlock.h">
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style Selector="TextBlock.dim">
+            <Setter Property="Foreground" Value="{DynamicResource SamDim}"/>
+        </Style>
+        <Style Selector="TextBlock.lbl">
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="TextBlock.warn">
+            <Setter Property="Foreground" Value="{DynamicResource SamWarn}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- ===== keygen buttons ===== -->
+        <Style Selector="Button.kg">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamBorder}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="Button.kg:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SamHover}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+        </Style>
+        <Style Selector="Button.kg:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SamAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamBg}"/>
+        </Style>
+        <Style Selector="Button.kg:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamDim}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamDim}"/>
+        </Style>
+        <Style Selector="Button.kg:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <Style Selector="Button.small">
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="Button.on">
+            <Setter Property="Background" Value="{DynamicResource SamSelect}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamAccent2}"/>
+        </Style>
+
+        <!-- START: the big accent button -->
+        <Style Selector="Button.go">
+            <Setter Property="BorderBrush" Value="{DynamicResource SamAccent}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="Background" Value="{DynamicResource SamHover}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent}"/>
+        </Style>
+        <Style Selector="Button.go:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SamAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamBg}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamAccent}"/>
+        </Style>
+
+        <!-- PAUSE = orange, SOFT STOP = yellow, HARD STOP = red -->
+        <Style Selector="Button.pause">
+            <Setter Property="BorderBrush" Value="{StaticResource SamPauseBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource SamPauseBrush}"/>
+            <Setter Property="Background" Value="#33FF8C00"/>
+        </Style>
+        <Style Selector="Button.pause:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource SamPauseBrush}"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamPauseBrush}"/>
+        </Style>
+        <Style Selector="Button.soft">
+            <Setter Property="BorderBrush" Value="{StaticResource SamSoftBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource SamSoftBrush}"/>
+            <Setter Property="Background" Value="#33FFD400"/>
+        </Style>
+        <Style Selector="Button.soft:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource SamSoftBrush}"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamSoftBrush}"/>
+        </Style>
+        <Style Selector="Button.hard">
+            <Setter Property="BorderBrush" Value="{StaticResource SamHardBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource SamHardBrush}"/>
+            <Setter Property="Background" Value="#33FF2A2A"/>
+        </Style>
+        <Style Selector="Button.hard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource SamHardBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamHardBrush}"/>
+        </Style>
+        <!-- disabled run controls keep their colour, just faded -->
+        <Style Selector="Button.pause:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource SamPauseBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamPauseBrush}"/>
+        </Style>
+        <Style Selector="Button.soft:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource SamSoftBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamSoftBrush}"/>
+        </Style>
+        <Style Selector="Button.hard:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource SamHardBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource SamHardBrush}"/>
+        </Style>
+        <Style Selector="Button.pause:disabled, Button.soft:disabled, Button.hard:disabled">
+            <Setter Property="Opacity" Value="0.3"/>
+        </Style>
+
+        <!-- text link -->
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent}"/>
+        </Style>
+        <Style Selector="Button.link:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <!-- inputs -->
+        <Style Selector="TextBox, ComboBox">
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Background" Value="#A0000000"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SamBorder}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+        </Style>
+        <Style Selector="ComboBox.offdefault">
+            <Setter Property="BorderBrush" Value="{DynamicResource SamWarn}"/>
+            <Setter Property="BorderThickness" Value="2"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
+        <Style Selector="ProgressBar">
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent}"/>
+            <Setter Property="Background" Value="{DynamicResource SamHover}"/>
+        </Style>
+        <Style Selector="ToolTip">
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- ===== output grid ===== -->
+        <Style Selector="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamText}"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#18FFFFFF"/>
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Background" Value="{DynamicResource SamHeaderBg}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="{StaticResource Mono}"/>
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="Padding" Value="8,0"/>
+        </Style>
+        <Style Selector="DataGridRow">
+            <Setter Property="Background" Value="{DynamicResource SamRowBg}"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Opacity" Value="0"/>
+        </Style>
+        <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="{DynamicResource SamHover}"/>
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Focusable" Value="False"/>
+        </Style>
+        <Style Selector="DataGridCell:current /template/ Grid#FocusVisual">
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+
+        <!-- row result colours -->
+        <Style Selector="TextBlock.good">
+            <Setter Property="Foreground" Value="{DynamicResource SamGood}"/>
+        </Style>
+        <Style Selector="TextBlock.warnrow">
+            <Setter Property="Foreground" Value="{DynamicResource SamWarn}"/>
+        </Style>
+        <Style Selector="TextBlock.bad">
+            <Setter Property="Foreground" Value="{DynamicResource SamBad}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+        <Style Selector="TextBlock.working">
+            <Setter Property="Foreground" Value="{DynamicResource SamAccent2}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+    </Application.Styles>
+</Application>

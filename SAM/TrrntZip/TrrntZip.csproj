@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>TrrntZip</AssemblyName>
+    <RootNamespace>TrrntZip</RootNamespace>
+    <Configurations>Debug;Release</Configurations>
+    <Platforms>X64;AnyCPU</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\StorageList\StorageList.csproj" />
+    <ProjectReference Include="..\..\Compress\Compress.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,280 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:SAM_UI_Avalonia.ViewModels"
+        xmlns:ctrl="using:SAM_UI_Avalonia.Controls"
+        xmlns:fx="using:SAM_UI_Avalonia.Fx"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
+        x:Class="SAM_UI_Avalonia.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/SAMUI.ico"
+        Width="1280" Height="820"
+        MinWidth="1020" MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        DragDrop.AllowDrop="True"
+        Title="SAM-UI  //  Eggman Edition">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Panel>
+        <Grid RowDefinitions="Auto,Auto,3,*,Auto">
+
+            <!-- ================================================================
+                 TOP: header + controls. Drop files/folders anywhere on the window.
+                 ================================================================ -->
+            <Panel Grid.Row="0" Height="104">
+                <fx:CopperHeader Line1="SAM-UI" Line2="TORRENTZIP / ZSTD / 7Z  RECOMPRESSOR" ReserveRight="440"/>
+
+                <!-- ===== jukebox ===== -->
+                <Border Classes="panel" Width="420" HorizontalAlignment="Right" Margin="0,8,8,6" Padding="10,4,10,6">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                        <DockPanel Grid.Row="0">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                <Button Classes="link" Content="TUNES DiR" Click="JbFolder_Click"
+                                        ToolTip.Tip="Open the Tunes folder - drop your own MOD/S3M/XM/IT/SID files in there"/>
+                                <Button Classes="link" Content="GET MORE MUSiC »" Click="JbMore_Click"
+                                        ToolTip.Tip="Opens modarchive.org in your browser"/>
+                            </StackPanel>
+                            <TextBlock Classes="h" Text="♫ JUKEBOX" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal">
+                                <fx:VuMeter Width="54" Height="12" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="JbFormat" Classes="dim" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <TextBlock Grid.Row="1" x:Name="JbTitle" Margin="0,2,0,0" FontWeight="Bold" FontSize="13"
+                                   TextTrimming="CharacterEllipsis" Foreground="{DynamicResource SamAccent}"/>
+                        <DockPanel Grid.Row="2" Margin="0,3,0,0">
+                            <TextBlock x:Name="JbTime" DockPanel.Dock="Right" FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            <Slider x:Name="JbVolume" DockPanel.Dock="Right" Width="80" Minimum="0" Maximum="100"
+                                    Margin="0,-12,0,-12" VerticalAlignment="Center" ToolTip.Tip="Jukebox volume"/>
+                            <StackPanel Orientation="Horizontal" Spacing="3">
+                                <Button Classes="kg small" Content="|&lt;&lt;" Click="JbPrev_Click" ToolTip.Tip="Previous tune"/>
+                                <Button Classes="kg small" x:Name="JbPlay" Content=" &gt; " Click="JbPlay_Click" MinWidth="36" ToolTip.Tip="Play / pause"/>
+                                <Button Classes="kg small" Content="&gt;&gt;|" Click="JbNext_Click" ToolTip.Tip="Next tune"/>
+                                <Button Classes="kg small" x:Name="JbShuffle" Content="RND" Click="JbShuffle_Click" ToolTip.Tip="Shuffle"/>
+                                <Button Classes="kg small" Content="OPEN" Click="JbOpen_Click" ToolTip.Tip="Open a tune; its folder becomes the playlist"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <ProgressBar Grid.Row="3" x:Name="JbProgress" Height="3" MinHeight="3" Margin="0,4,0,0"
+                                     Minimum="0" Maximum="1" Foreground="{DynamicResource SamAccent2}"/>
+                    </Grid>
+                </Border>
+            </Panel>
+
+            <!-- ===== control deck ===== -->
+            <Border Grid.Row="1" Classes="panel" Margin="8,0,8,6" Padding="10,8">
+                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
+
+                    <!-- path -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Classes="lbl" Text="PATH ►" Width="62"/>
+                        <TextBox Grid.Column="1" x:Name="PathBox" Text="{Binding PathText}"
+                                 PlaceholderText="drop files / folders anywhere on this window, use FILES / FOLDER, or type a path (several: separate with |)"
+                                 VerticalContentAlignment="Center"
+                                 ToolTip.Tip="{Binding PathText}"/>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="kg" Content="FILES..." Click="PickFiles_Click" ToolTip.Tip="Pick files (Ctrl+O). Hold Ctrl when clicking to add to what's staged."/>
+                            <Button Classes="kg" Content="FOLDER..." Click="PickFolder_Click" ToolTip.Tip="Pick folders (Ctrl+D). Hold Ctrl when clicking to add to what's staged."/>
+                            <Button Classes="kg" Content="CLEAR" Command="{Binding ClearCommand}" ToolTip.Tip="Clear the staged path and the list"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- formats -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="lbl" Text="IN ►" Width="62"/>
+                        <ComboBox Grid.Column="1" Width="150"
+                                  Classes.offdefault="{Binding IsOffDefault}"
+                                  ItemsSource="{Binding InputTypes}"
+                                  SelectedValue="{Binding SelectedInputType}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  DisplayMemberBinding="{Binding Display}"
+                                  ToolTip.Tip="Which files to pick up from the staged folders"/>
+                        <TextBlock Grid.Column="2" Classes="lbl" Text="OUT ►" Margin="6,0,0,0"/>
+                        <ComboBox Grid.Column="3" Width="190"
+                                  Classes.offdefault="{Binding IsOffDefault}"
+                                  ItemsSource="{Binding OutputTypes}"
+                                  SelectedValue="{Binding SelectedOutputType}"
+                                  SelectedValueBinding="{Binding Value}"
+                                  DisplayMemberBinding="{Binding Display}"
+                                  ToolTip.Tip="The archive format to produce"/>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="kg small" Content="★ SAVE AS DEFAULT" Command="{Binding SaveDefaultsCommand}"
+                                    ToolTip.Tip="SAM-UI always starts on your default IN/OUT. Changes you make without saving last only until you close it."/>
+                            <Button Classes="kg small" Content="↺ BACK TO DEFAULT" Command="{Binding ResetDefaultsCommand}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="5" Text="{Binding DefaultsHint}" Margin="6,0,0,0" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" FontSize="11"
+                                   Classes.warn="{Binding IsOffDefault}" Classes.dim="{Binding !IsOffDefault}"/>
+                        <CheckBox Grid.Column="6" Content="DRY RUN" IsChecked="{Binding IsDryRun}"
+                                  ToolTip.Tip="Check only - nothing is written. Always off when SAM-UI starts."/>
+                        <TextBlock Grid.Column="7" Classes="lbl" Text="THREADS ►" Margin="8,0,0,0"/>
+                        <Slider Grid.Column="8" Width="130" Minimum="1" Maximum="{Binding MaxThreadCount}" TickFrequency="1"
+                                IsSnapToTickEnabled="True" Value="{Binding ThreadCount}" Margin="0,-10"
+                                VerticalAlignment="Center" ToolTip.Tip="{Binding ThreadCapText}"/>
+                        <TextBlock Grid.Column="9" VerticalAlignment="Center" FontWeight="Bold" MinWidth="44"
+                                   ToolTip.Tip="{Binding ThreadCapText}">
+                            <Run Text="{Binding ThreadCount}"/><Run Text="/" Foreground="{DynamicResource SamDim}"/><Run Text="{Binding MaxThreadCount}" Foreground="{DynamicResource SamDim}"/>
+                        </TextBlock>
+                    </Grid>
+
+                    <!-- look + run controls -->
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="lbl" Text="THEME ►" Width="62"/>
+                        <ComboBox Grid.Column="1" Width="190" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"/>
+                        <TextBlock Grid.Column="2" Classes="lbl" Text="3D ►" Margin="6,0,0,0"/>
+                        <ComboBox Grid.Column="3" Width="130" ItemsSource="{Binding ShapeNames}" SelectedItem="{Binding SelectedShape}"
+                                  ToolTip.Tip="Vector object behind the output list"/>
+                        <CheckBox Grid.Column="4" Content="FX" IsChecked="{Binding EffectsOn}" ToolTip.Tip="Animated effects on/off (off = still frame, zero CPU)"/>
+                        <CheckBox Grid.Column="5" Content="CRT" IsChecked="{Binding ScanlinesOn}" ToolTip.Tip="CRT scanlines"/>
+                        <Button Grid.Column="6" Classes="kg small" Content="NFO" Click="Nfo_Click" ToolTip.Tip="About / help (F1)"/>
+
+                        <Button Grid.Column="8" Classes="kg" Content="PREVIEW" Command="{Binding PreviewCommand}" MinWidth="90"
+                                ToolTip.Tip="List what would be processed, with sizes, without starting (F5)"/>
+                        <Button Grid.Column="9" Classes="kg go" Content="{Binding StartButtonText}" Command="{Binding StartCommand}" MinWidth="130"
+                                ToolTip.Tip="Process the staged items (Ctrl+Enter). While running, adds them to the queue."/>
+                        <Border Grid.Column="10" Width="2" Background="{DynamicResource SamBorder}" Margin="4,2"/>
+                        <Button Grid.Column="11" Classes="kg pause" Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" MinWidth="90"
+                                ToolTip.Tip="Pause / resume all processing (Pause key)"/>
+                        <StackPanel Grid.Column="12" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="kg soft" Content="SOFT STOP" Command="{Binding SoftStopCommand}"
+                                    ToolTip.Tip="Finish the files currently being processed, then stop. Queued files are skipped."/>
+                            <Button Classes="kg hard" Content="HARD STOP" Command="{Binding HardStopCommand}"
+                                    ToolTip.Tip="Stop immediately. Files in progress are abandoned (originals are left unchanged)."/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- ===== raster bar ===== -->
+            <fx:CopperRule Grid.Row="2"/>
+
+            <!-- ================================================================
+                 OUTPUT: full width. Vector objects + stars behind the list.
+                 ================================================================ -->
+            <Panel Grid.Row="3">
+                <fx:VectorBackdrop/>
+
+                <DataGrid x:Name="FilesGrid" ItemsSource="{Binding Files}"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          RowHeight="22"
+                          GridLinesVisibility="Horizontal"
+                          CanUserSortColumns="False"
+                          CanUserReorderColumns="False"
+                          CanUserResizeColumns="True"
+                          HorizontalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <!-- percent / result tag -->
+                        <DataGridTemplateColumn Header="DONE" Width="84" MinWidth="70">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:samFile">
+                                    <TextBlock Text="{Binding ProgressText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontWeight="Bold"
+                                               Classes.working="{Binding IsWorking}" Classes.good="{Binding IsGood}"
+                                               Classes.warnrow="{Binding IsWarn}" Classes.bad="{Binding IsBad}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- filename, with the progress bar layered behind it -->
+                        <DataGridTemplateColumn Header="FILENAME" Width="560" MinWidth="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:samFile">
+                                    <Panel>
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}"
+                                                     IsVisible="{Binding IsProcessing}"
+                                                     Foreground="{DynamicResource SamProgressFill}" Background="Transparent"
+                                                     MinHeight="0" MinWidth="0" Height="20" Margin="0,1"
+                                                     VerticalAlignment="Stretch"/>
+                                        <ctrl:PathTextBlock Text="{Binding Name}" Margin="6,0"
+                                                            FontSize="12" VerticalAlignment="Center"
+                                                            ToolTip.Tip="{Binding Name}"/>
+                                    </Panel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="SIZE" Width="100" MinWidth="60">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:samFile">
+                                    <TextBlock Text="{Binding SizeText}" Margin="6,0" FontSize="12"
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTemplateColumn Header="STATUS" Width="*" MinWidth="180">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:samFile">
+                                    <TextBlock Text="{Binding Status}" Margin="6,0" FontSize="12"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                               ToolTip.Tip="{Binding Status}"
+                                               Classes.working="{Binding IsWorking}" Classes.good="{Binding IsGood}"
+                                               Classes.warnrow="{Binding IsWarn}" Classes.bad="{Binding IsBad}"
+                                               Classes.dim="{Binding IsPreview}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- empty state: ANSI art + how-to -->
+                <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsHitTestVisible="False" Margin="0,26,0,0" Spacing="10">
+                    <TextBlock x:Name="AnsiLogo" FontFamily="{StaticResource Mono}" FontSize="14"
+                               Foreground="{DynamicResource SamAnsiBrush}" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="AnsiHowTo" FontFamily="{StaticResource Mono}" FontSize="13" LineHeight="19"
+                               Foreground="{DynamicResource SamText}" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+
+            <!-- ================================================================
+                 STATUS BAR
+                 ================================================================ -->
+            <Border Grid.Row="4" Background="{DynamicResource SamPanel}" BorderBrush="{DynamicResource SamBorder}" BorderThickness="0,1,0,0">
+                <StackPanel>
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding OverallPercent}" Height="5" MinHeight="5"
+                                 Foreground="{DynamicResource SamAccent}"/>
+                    <fx:SineScroller Height="30" Text="{Binding ScrollText}"/>
+                    <Border Height="1" Background="{DynamicResource SamBorder}" Opacity="0.5"/>
+                    <TextBlock Text="{Binding Message}" Margin="10,4,10,0" FontSize="12"
+                               Foreground="{DynamicResource SamAccent2}" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Message}"/>
+                    <DockPanel Margin="10,3,10,5">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16">
+                            <TextBlock Text="{Binding SpeedText}" Classes="dim"/>
+                            <TextBlock Classes="dim"><Run Text="ELAPSED "/><Run Text="{Binding ElapsedText}" Foreground="{DynamicResource SamText}"/></TextBlock>
+                            <TextBlock Text="{Binding EtaText}" FontWeight="Bold" Foreground="{DynamicResource SamAccent}"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <StackPanel Orientation="Horizontal" Spacing="6" MinWidth="110">
+                                <ctrl:BusySpinner Width="14" Height="14" Foreground="{DynamicResource SamAccent}"
+                                                  IsBusy="{Binding IsSpinning}" IsHitTestVisible="False"/>
+                                <TextBlock Text="{Binding StateText}" FontWeight="Bold" Foreground="{DynamicResource SamAccent}"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding CounterText}" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding ResultText}" Classes="dim"/>
+                            <TextBlock Text="{Binding BytesText}" Classes="dim"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- drop overlay -->
+        <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False"
+                Background="#B0000000" BorderBrush="{DynamicResource SamAccent}" BorderThickness="3" Margin="6">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="▼▼▼  DROP TO STAGE  ▼▼▼" FontSize="30" FontWeight="Bold"
+                           Foreground="{DynamicResource SamAccent}" HorizontalAlignment="Center"/>
+                <TextBlock Text="nothing starts until you press START  ·  hold CTRL to add to what's already staged"
+                           FontSize="13" Foreground="{DynamicResource SamText}" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <fx:Scanlines IsVisible="{Binding ScanlinesOn}"/>
+    </Panel>
+</Window>

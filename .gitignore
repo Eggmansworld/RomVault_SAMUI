@@ -1,0 +1,19 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+obj/
+bin/
+/packages
+/.vs
+*.user
+/.idea/
+*/.vs
+/ROMVault/.vs/RomVault.csproj.dtbcache.json
+
+# --- SAM-UI Eggman Edition ---
+artifacts/
+build.log
+SAM-UI.settings.json
+CLAUDE.md
+*.patch
+

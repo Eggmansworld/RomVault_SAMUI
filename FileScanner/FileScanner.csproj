@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+	<LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release</Configurations>
+    <Platforms>AnyCPU;X64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Libraries\StorageList\StorageList.csproj" />
+    <ProjectReference Include="..\Compress\Compress.csproj" />
+    <ProjectReference Include="..\Libraries\RVUtils\RVUtils.csproj" />
+    <ProjectReference Include="..\SharedEnum\SharedEnum.csproj" />
+  </ItemGroup>
+
+</Project>
