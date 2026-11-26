@@ -68,17 +68,22 @@
             <Border Grid.Row="1" Classes="panel" Margin="8,0,8,6" Padding="10,8">
                 <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="7">
 
-                    <!-- path -->
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <!-- add to the list -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Classes="lbl" Text="PATH ►" Width="62"/>
                         <TextBox Grid.Column="1" x:Name="PathBox" Text="{Binding PathText}"
-                                 PlaceholderText="drop files / folders anywhere on this window, use FILES / FOLDER, or type a path (several: separate with |)"
+                                 PlaceholderText="type or paste a path and press ENTER / ADD  -  or just drop files / folders anywhere on this window"
                                  VerticalContentAlignment="Center"
-                                 ToolTip.Tip="{Binding PathText}"/>
+                                 ToolTip.Tip="Several paths: separate them with |"/>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
-                            <Button Classes="kg" Content="FILES..." Click="PickFiles_Click" ToolTip.Tip="Pick files (Ctrl+O). Hold Ctrl when clicking to add to what's staged."/>
-                            <Button Classes="kg" Content="FOLDER..." Click="PickFolder_Click" ToolTip.Tip="Pick folders (Ctrl+D). Hold Ctrl when clicking to add to what's staged."/>
-                            <Button Classes="kg" Content="CLEAR" Command="{Binding ClearCommand}" ToolTip.Tip="Clear the staged path and the list"/>
+                            <Button Classes="kg" Content="ADD" Command="{Binding AddPathCommand}" ToolTip.Tip="Add the typed path to the list (Enter)"/>
+                            <Button Classes="kg" Content="FILES..." Click="PickFiles_Click" ToolTip.Tip="Pick files to add (Ctrl+O)"/>
+                            <Button Classes="kg" Content="FOLDER..." Click="PickFolder_Click" ToolTip.Tip="Pick folders to add (Ctrl+D)"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0">
+                            <Button Classes="kg" Content="REMOVE" Click="Remove_Click" ToolTip.Tip="Remove the selected rows (DEL). Ctrl+click / Shift+click to select several."/>
+                            <Button Classes="kg" Content="SAVE LIST" Click="SaveList_Click" ToolTip.Tip="Save the list with sizes and status to a CSV or text file (Ctrl+S)"/>
+                            <Button Classes="kg" Content="CLEAR" Command="{Binding ClearCommand}" ToolTip.Tip="Empty the list (while running: only rows not started yet)"/>
                         </StackPanel>
                     </Grid>
 
@@ -110,12 +115,9 @@
                         </TextBlock>
                         <CheckBox Grid.Column="7" Content="DRY RUN" IsChecked="{Binding IsDryRun}"
                                   ToolTip.Tip="Check only - nothing is written. Always off when SAM-UI starts."/>
-
-                        <Button Grid.Column="9" Classes="kg" Content="PREVIEW" Command="{Binding PreviewCommand}" MinWidth="90"
-                                ToolTip.Tip="List what would be processed, with sizes, without starting (F5)"/>
                         <Button Grid.Column="10" Classes="kg go" Classes.ready="{Binding IsReadyToStart}"
                                 Content="{Binding StartButtonText}" Command="{Binding StartCommand}" MinWidth="130"
-                                ToolTip.Tip="Process the staged items (Ctrl+Enter). While running, adds them to the queue."/>
+                                ToolTip.Tip="Process the Queued rows (Ctrl+Enter). While running, adds them to the running job."/>
                         <Border Grid.Column="11" Width="2" Background="{DynamicResource SamBorder}" Margin="4,2"/>
                         <Button Grid.Column="12" Classes="kg pause" Content="{Binding PauseButtonText}" Command="{Binding PauseCommand}" MinWidth="90"
                                 ToolTip.Tip="Pause / resume all processing (Pause key)"/>
@@ -156,14 +158,38 @@
                 <fx:VectorBackdrop AllowBoing="True"/>
 
                 <DataGrid x:Name="FilesGrid" ItemsSource="{Binding Files}"
+                          KeyDown="Grid_KeyDown"
                           IsReadOnly="True"
-                          SelectionMode="Single"
+                          SelectionMode="Extended"
+                          ClipboardCopyMode="None"
                           RowHeight="22"
                           GridLinesVisibility="Horizontal"
                           CanUserSortColumns="False"
                           CanUserReorderColumns="False"
                           CanUserResizeColumns="True"
                           HorizontalScrollBarVisibility="Auto">
+                    <DataGrid.ContextMenu>
+
+                        <ContextMenu>
+
+                            <MenuItem Header="Copy line(s)" InputGesture="Ctrl+C" Click="CopyLines_Click"/>
+
+                            <MenuItem Header="Copy filename(s)" Click="CopyNames_Click"/>
+
+                            <Separator/>
+
+                            <MenuItem Header="Remove from list" InputGesture="Delete" Click="Remove_Click"/>
+
+                            <MenuItem Header="Select all" InputGesture="Ctrl+A" Click="SelectAll_Click"/>
+
+                            <Separator/>
+
+                            <MenuItem Header="Save list..." InputGesture="Ctrl+S" Click="SaveList_Click"/>
+
+                        </ContextMenu>
+
+                    </DataGrid.ContextMenu>
+
                     <DataGrid.Columns>
                         <!-- percent / result tag -->
                         <DataGridTemplateColumn Header="DONE" Width="84" MinWidth="70">
@@ -214,8 +240,7 @@
                                                TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
                                                ToolTip.Tip="{Binding Status}"
                                                Classes.working="{Binding IsWorking}" Classes.good="{Binding IsGood}"
-                                               Classes.warnrow="{Binding IsWarn}" Classes.bad="{Binding IsBad}"
-                                               Classes.dim="{Binding IsPreview}"/>
+                                               Classes.warnrow="{Binding IsWarn}" Classes.bad="{Binding IsBad}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
@@ -269,9 +294,9 @@
         <Border x:Name="DropOverlay" IsVisible="False" IsHitTestVisible="False"
                 Background="#B0000000" BorderBrush="{DynamicResource SamAccent}" BorderThickness="3" Margin="6">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
-                <TextBlock Text="▼▼▼  DROP TO STAGE  ▼▼▼" FontSize="30" FontWeight="Bold"
+                <TextBlock Text="▼▼▼  DROP TO ADD TO THE LIST  ▼▼▼" FontSize="30" FontWeight="Bold"
                            Foreground="{DynamicResource SamAccent}" HorizontalAlignment="Center"/>
-                <TextBlock Text="nothing starts until you press START  ·  hold CTRL to add to what's already staged"
+                <TextBlock Text="everything lands in the list as Queued  ·  nothing starts until you press START"
                            FontSize="13" Foreground="{DynamicResource SamText}" HorizontalAlignment="Center"/>
             </StackPanel>
         </Border>

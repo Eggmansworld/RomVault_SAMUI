@@ -1,5 +1,14 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.4.0 – 2026-11-26 – the list is the queue
+- **Dropped or picked items go straight into the list** as **Queued**, scanned with the IN filter and shown with sizes. The status bar shows `QUEUED n (size)`. PREVIEW is gone because the list *is* the preview. The PATH box is now "type a path, press ENTER / ADD".
+- Drops keep adding to the list. After a finished job, the next drop starts a fresh list. Changing IN re-scans what was dropped, and rows you removed stay removed.
+- START processes the Queued rows; their status becomes "Waiting for a worker", then Processing, then the result. While a job runs, new drops queue up and **ADD TO QUEUE** adds them to it.
+- **Select and remove rows:** click, Ctrl+click or Shift+click (Ctrl+A for all), then **DEL**, the **REMOVE** button or right-click > Remove. Rows being processed can't be removed. Rows already waiting for a worker are pulled back out of the worker queue. A confirmation dialog appears, with "don't ask again"; it can be switched back on or off in SETUP > LIST.
+- **SAVE LIST** (Ctrl+S, or right-click) saves every row's filename, size and status to **CSV** (Excel friendly) or tab-separated **TXT**.
+- **Copy rows:** Ctrl+C or right-click > Copy line(s) copies filename, size and status, tab-separated. "Copy filename(s)" copies just the paths.
+- Selected rows are highlighted. SETUP scrolls if it's taller than the screen.
+
 ## v1.3.2 – 2026-11-26
 - The output list remembers the widths you drag the DONE, FILENAME and SIZE columns to (STATUS fills the rest). They're saved when SAM-UI closes.
 - The sine scroller text can be edited in SETUP and updates live as you type. **↺ DEFAULT TEXT** brings back the built-in text, and an empty box shows it too.

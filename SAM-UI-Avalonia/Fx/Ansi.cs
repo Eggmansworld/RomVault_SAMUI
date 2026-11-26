@@ -16,9 +16,9 @@ public static class Ansi
 
     public const string HowTo =
         "┌───────────────────────────────────────────────────────────────┐\n" +
-        "│  [1] STAGE    drop files / folders ANYWHERE on this window    │\n" +
+        "│  [1] ADD      drop files / folders ANYWHERE on this window    │\n" +
         "│               or hit FILES... / FOLDER...  or type a path     │\n" +
-        "│  [2] CHECK    IN / OUT formats  -  PREVIEW to see the list    │\n" +
+        "│  [2] CHECK    the list + IN / OUT  -  DEL removes a row       │\n" +
         "│  [3] START    then kick back and fire up the jukebox  ♫       │\n" +
         "└───────────────────────────────────────────────────────────────┘";
 }

@@ -81,7 +81,7 @@ public static class Skin
         r["SamWarn"] = new SolidColorBrush(c.Warn);
         r["SamBad"] = new SolidColorBrush(c.Bad);
         r["SamHover"] = new SolidColorBrush(WithAlpha(c.Accent, 60));
-        r["SamSelect"] = new SolidColorBrush(WithAlpha(c.Accent2, 90));
+        r["SamSelect"] = new SolidColorBrush(WithAlpha(c.Accent2, 120));
         r["SamRowBg"] = new SolidColorBrush(WithAlpha(c.Bg, 150));
         r["SamHeaderBg"] = new SolidColorBrush(WithAlpha(c.Panel, 235));
         r["SamProgressFill"] = new LinearGradientBrush

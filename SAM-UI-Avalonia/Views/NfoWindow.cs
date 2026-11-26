@@ -75,15 +75,14 @@ $@"  ░▒▓ RELEASE iNFO ▓▒░
 
   ░▒▓ HOW iT WORKS ▓▒░
 
-    [1] STAGE   Drop files or folders ANYWHERE on the window, use
-                FILES... / FOLDER..., or type a path in the PATH box.
-                Several paths: separate them with  |
-                Hold CTRL while dropping/picking to ADD to what's staged.
-                Nothing starts yet!
+    [1] ADD     Drop files or folders ANYWHERE on the window, use
+                FILES... / FOLDER..., or type a path and press ENTER.
+                Everything matching the IN filter lands in the list
+                as ""Queued"", with sizes. Nothing starts yet!
     [2] CHECK   IN  = which files to pick up (ZIP, 7Z, Files, Dirs...)
-                OUT = the format to make.
-                PREVIEW lists every item that would be processed,
-                with sizes and a total, without touching anything.
+                OUT = the format to make. Changing IN re-scans the list.
+                Select rows (Ctrl/Shift+click) and press DEL to drop them.
+                Right-click a row to copy it, SAVE LIST writes a CSV.
     [3] START   Rows go  Queued -> Processing (bar behind the name)
                 -> result. START while running = ADD TO QUEUE.
 
@@ -105,10 +104,11 @@ $@"  ░▒▓ RELEASE iNFO ▓▒░
   ░▒▓ KEYS ▓▒░
 
     CTRL+O  pick files          CTRL+D      pick folders
-    F5      preview             CTRL+ENTER  start
+    DEL     remove rows         CTRL+ENTER  start
+    CTRL+C  copy rows           CTRL+S      save the list
     PAUSE   pause / resume      F1          this NFO
     F2      SETUP (themes, effects, music)
-    ENTER in the PATH box = preview
+    ENTER in the PATH box = add that path
 
   ░▒▓ JUKEBOX ▓▒░
 

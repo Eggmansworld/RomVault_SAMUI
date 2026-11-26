@@ -43,9 +43,6 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Queued rows waiting for a worker, by full path. UI thread only.</summary>
     private readonly Dictionary<string, Queue<samFile>> _queuedByPath = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Result of the last PREVIEW, reused by START if nothing changed since.</summary>
-    private ScanResult? _preview;
-
     private CancellationTokenSource? _scanCts;
     private readonly Stopwatch _jobClock = new();
     private readonly DispatcherTimer _statsTimer;
@@ -174,7 +171,6 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(SoftStopCommand))]
     [NotifyCanExecuteChangedFor(nameof(HardStopCommand))]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
     [NotifyPropertyChangedFor(nameof(IsSpinning))]
     [NotifyPropertyChangedFor(nameof(StateText))]
     [NotifyPropertyChangedFor(nameof(StartButtonText))]
@@ -199,7 +195,6 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>True while a PREVIEW or START scan is walking the folders.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
     [NotifyPropertyChangedFor(nameof(StateText))]
     [NotifyPropertyChangedFor(nameof(IsSpinning))]
     [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
@@ -211,7 +206,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string PauseButtonText => IsPaused ? "RESUME" : "PAUSE";
 
     /// <summary>Something is staged and START would begin a new job: the START button pulses.</summary>
-    public bool IsReadyToStart => HasStaged && !IsRunning && !IsScanning && !IsSoftStopping;
+    public bool IsReadyToStart => HasPending && !IsRunning && !IsScanning && !IsSoftStopping;
 
     public string StartButtonText => IsRunning ? "ADD TO QUEUE" : "START";
 
@@ -220,7 +215,7 @@ public partial class MainWindowViewModel : ViewModelBase
         get
         {
             if (IsScanning) return "SCANNING";
-            if (!IsRunning) return HasStaged ? "READY" : "IDLE";
+            if (!IsRunning) return HasPending ? "READY" : "IDLE";
             if (IsSoftStopping) return "STOPPING";
             if (IsPaused) return "PAUSED";
             return "WORKING";
@@ -268,69 +263,156 @@ public partial class MainWindowViewModel : ViewModelBase
             : $"Job done in {ElapsedText}. {FilesOk:N0} OK, {FilesFailed:N0} failed.";
     }
 
-    // =================================================================== staging
+    // =================================================================== the list = the queue
 
-    /// <summary>
-    /// The staged path(s). Several paths are shown separated by " | " ('|' can't appear in a
-    /// Windows path). The text box is editable, so this is the source of truth.
-    /// </summary>
+    /// <summary>PATH box: type or paste a path, then ADD / Enter. Several: separate with |.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasStaged))]
-    [NotifyPropertyChangedFor(nameof(StateText))]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddPathCommand))]
     [NotifyCanExecuteChangedFor(nameof(ClearCommand))]
-    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
     private string _pathText = "";
 
-    public bool HasStaged => StagedPaths().Count > 0;
+    /// <summary>Rows dropped / picked but not handed to the workers yet (status "Queued").</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPending))]
+    [NotifyPropertyChangedFor(nameof(IsReadyToStart))]
+    [NotifyPropertyChangedFor(nameof(StateText))]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ClearCommand))]
+    private int _pendingCount;
 
-    partial void OnPathTextChanged(string value) => _preview = null;
+    private long _pendingBytes;
+    public bool HasPending => PendingCount > 0;
 
-    public List<string> StagedPaths() =>
-        PathText.Split('|')
-            .Select(p => p.Trim().Trim('"').Trim())
-            .Where(p => p.Length > 0)
-            .ToList();
+    /// <summary>What was dropped/picked (re-scanned if the IN filter changes).</summary>
+    private readonly List<string> _stagedRoots = new();
+    /// <summary>Queued rows the user removed: stay out when the list is re-scanned.</summary>
+    private readonly HashSet<string> _excluded = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Stray __*.tztmp temp files found by the scans; FileAdder deletes them.</summary>
+    private readonly List<string> _pendingJunk = new();
+    private readonly SemaphoreSlim _scanGate = new(1, 1);
+    /// <summary>FileAdder is still feeding the last START into the worker queue.</summary>
+    private bool _adderBusy;
 
-    /// <summary>Called by drag & drop and the FILES / FOLDER pickers.</summary>
-    /// <param name="append">Ctrl held: add to what's already staged.</param>
-    public void Stage(IReadOnlyList<string> paths, bool append = false)
+    private void UpdatePending()
     {
-        if (paths.Count == 0) return;
-        List<string> list = append ? StagedPaths() : new List<string>();
-        foreach (string p in paths)
-            if (!list.Contains(p, StringComparer.OrdinalIgnoreCase)) list.Add(p);
-        PathText = string.Join("  |  ", list);
-
-        if (!IsRunning && !IsScanning)
-            ClearGrid();
-
-        int files = list.Count(File.Exists), dirs = list.Count(Directory.Exists);
-        Message = $"STAGED {Describe(files, dirs)}  ->  {OutputName}  (input filter: {InputName}).  Press PREVIEW to look first, or START.";
+        int n = 0;
+        long b = 0;
+        foreach (samFile r in Files)
+            if (r.IsPending) { n++; if (r.Size > 0) b += r.Size; }
+        _pendingBytes = b;
+        PendingCount = n;
+        OnPropertyChanged(nameof(CounterText));
+        ClearCommand.NotifyCanExecuteChanged();
     }
 
-    private static string Describe(int files, int dirs)
+    /// <summary>
+    /// Drag &amp; drop, FILES / FOLDER, the PATH box and the command line all come here.
+    /// The paths are scanned with the current IN filter and every match is added to the list
+    /// as "Queued". Nothing starts until START.
+    /// </summary>
+    public async void Stage(IReadOnlyList<string> paths)
     {
-        var parts = new List<string>();
-        if (dirs > 0) parts.Add(dirs == 1 ? "1 folder" : $"{dirs} folders");
-        if (files > 0) parts.Add(files == 1 ? "1 file" : $"{files} files");
-        return parts.Count == 0 ? "nothing that exists" : string.Join(" + ", parts);
+        List<string> list = paths.Select(p => p.Trim().Trim('"').Trim()).Where(p => p.Length > 0)
+                                 .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        List<string> missing = list.Where(p => !File.Exists(p) && !Directory.Exists(p)).ToList();
+        list = list.Except(missing, StringComparer.OrdinalIgnoreCase).ToList();
+        if (missing.Count > 0) Message = "PATH NOT FOUND: " + string.Join("  |  ", missing);
+        if (list.Count == 0) return;
+
+        if (!IsRunning) DropFinishedRows(); // a new batch after a finished job starts a fresh list
+        foreach (string p in list)
+            if (!_stagedRoots.Contains(p, StringComparer.OrdinalIgnoreCase)) _stagedRoots.Add(p);
+
+        ScanResult? scan = await Scan(list);
+        if (scan == null) return;
+        var (added, bytes) = AddPendingRows(scan, reinclude: true);
+
+        Message = added == 0
+            ? $"Nothing new added: no matches for the IN filter '{InputName}' (or already in the list)."
+            : $"ADDED {added:N0} item(s), {samFile.FormatSize(bytes)}.  Queued: {PendingCount:N0} ({samFile.FormatSize(_pendingBytes)})  ->  {OutputName}.  " +
+              (IsRunning ? "Press ADD TO QUEUE to process them." : "Press START when ready (DEL removes selected rows).");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddPath))]
+    private void AddPath()
+    {
+        string[] paths = PathText.Split('|');
+        PathText = "";
+        Stage(paths);
+    }
+
+    private bool CanAddPath() => PathText.Trim().Length > 0;
+
+    /// <summary>Adds scan results as Queued rows (skipping ones already queued).</summary>
+    private (int Added, long Bytes) AddPendingRows(ScanResult scan, bool reinclude)
+    {
+        var queued = new HashSet<string>(Files.Where(r => r.IsPending).Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
+        var itemPaths = new HashSet<string>(scan.Items.Select(i => i.Path), StringComparer.OrdinalIgnoreCase);
+        var newRows = new List<samFile>();
+        long bytes = 0;
+        foreach (ScanItem item in scan.Items)
+        {
+            if (reinclude) _excluded.Remove(item.Path);       // dropping it again brings it back
+            else if (_excluded.Contains(item.Path)) continue;
+            if (!queued.Add(item.Path)) continue;
+            newRows.Add(new samFile { Name = item.Path, Size = item.Size, Status = "Queued", IsPending = true });
+            if (item.Size > 0) bytes += item.Size;
+        }
+        _pendingJunk.AddRange(scan.HandOff.Where(p => !itemPaths.Contains(p)));
+        if (newRows.Count > 0)
+            Files = new ObservableCollection<samFile>(Files.Concat(newRows));
+        UpdatePending();
+        return (newRows.Count, bytes);
+    }
+
+    /// <summary>Changing IN re-scans what was dropped (removed rows stay removed).</summary>
+    private async void RescanPending()
+    {
+        if (_stagedRoots.Count == 0) return;
+        ScanResult? scan = await Scan(_stagedRoots.ToList());
+        if (scan == null) return;
+        Files = new ObservableCollection<samFile>(Files.Where(r => !r.IsPending));
+        _pendingJunk.Clear();
+        AddPendingRows(scan, reinclude: false);
+        Message = $"Re-scanned for IN '{InputName}': {PendingCount:N0} item(s) queued ({samFile.FormatSize(_pendingBytes)}).";
+    }
+
+    /// <summary>Removes the results of a finished job (keeps Queued rows). Idle only.</summary>
+    private void DropFinishedRows()
+    {
+        if (IsRunning) return;
+        if (Files.Any(r => !r.IsPending))
+            Files = new ObservableCollection<samFile>(Files.Where(r => r.IsPending));
+        MainQueue.fileCount = 0;
+        _rowsByFileId.Clear();
+        _rowsByThreadId.Clear();
+        _queuedByPath.Clear();
+        ResetCounters();
     }
 
     [RelayCommand(CanExecute = nameof(CanClear))]
     private void Clear()
     {
         _scanCts?.Cancel();
+        _scanCts = null;
         PathText = "";
+        _stagedRoots.Clear();
+        _excluded.Clear();
+        _pendingJunk.Clear();
         if (!IsRunning)
         {
             ClearGrid();
             Message = "Cleared. Drop files or folders anywhere, or use FILES / FOLDER.";
         }
+        else
+        {
+            Files = new ObservableCollection<samFile>(Files.Where(r => !r.IsPending));
+            Message = "Cleared the rows that weren't added to the running job yet.";
+        }
+        UpdatePending();
     }
 
-    private bool CanClear() => PathText.Length > 0 || (!IsRunning && Files.Count > 0);
+    private bool CanClear() => PathText.Length > 0 || (Files.Count > 0 && (!IsRunning || HasPending));
 
     private void ClearGrid()
     {
@@ -339,73 +421,115 @@ public partial class MainWindowViewModel : ViewModelBase
         _rowsByThreadId.Clear();
         _queuedByPath.Clear();
         Files = new ObservableCollection<samFile>();
-        _preview = null;
         ResetCounters();
-        ClearCommand.NotifyCanExecuteChanged();
+        UpdatePending();
     }
 
-    // =================================================================== preview / start
+    // =================================================================== remove / copy / save
 
-    [RelayCommand(CanExecute = nameof(CanPreview))]
-    private async Task Preview()
+    /// <summary>
+    /// Removes rows from the list. Rows being processed can't be removed. Rows already handed to
+    /// the workers are pulled back out of the worker queue.
+    /// </summary>
+    public void RemoveRows(IReadOnlyCollection<samFile> rows)
     {
-        ScanResult? scan = await ScanStaged();
-        if (scan == null) return;
-
-        _preview = scan;
-        if (!IsRunning)
+        var remove = new HashSet<samFile>();
+        var fromWorkerQueue = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        int busy = 0;
+        foreach (samFile row in rows)
         {
-            ClearGrid();
-            _preview = scan;
-            Files = new ObservableCollection<samFile>(scan.Items.Select(i => new samFile
+            if (row.IsProcessing) { busy++; continue; }
+            if (row.IsQueued)
             {
-                Name = i.Path, Size = i.Size, Status = "Preview - not queued", IsPreview = true
-            }));
-            FilesTotal = scan.Items.Count;
-            BytesTotal = scan.TotalBytes;
+                if (_adderBusy) { busy++; continue; } // still being fed in: try again in a second
+                fromWorkerQueue.Add(row.Name);
+                if (_queuedByPath.TryGetValue(row.Name, out Queue<samFile>? q))
+                {
+                    var rest = new Queue<samFile>(q.Where(r => !ReferenceEquals(r, row)));
+                    if (rest.Count == 0) _queuedByPath.Remove(row.Name); else _queuedByPath[row.Name] = rest;
+                }
+                FilesTotal--;
+                if (row.Size > 0) BytesTotal -= row.Size;
+            }
+            else if (row.IsPending) _excluded.Add(row.Name);
+            remove.Add(row);
         }
 
-        Message = scan.Items.Count == 0
-            ? $"PREVIEW: nothing matches the input filter '{InputName}'. Check the IN setting."
-            : $"PREVIEW: {scan.Items.Count:N0} item(s), {samFile.FormatSize(scan.TotalBytes)}  ->  {OutputName}{(IsDryRun ? "  [DRY RUN]" : "")}.  Press START to process them.";
+        if (fromWorkerQueue.Count > 0) DropFromWorkerQueue(fromWorkerQueue);
+        if (remove.Count > 0) Files = new ObservableCollection<samFile>(Files.Where(r => !remove.Contains(r)));
+        UpdatePending();
+
+        Message = $"Removed {remove.Count:N0} row(s)." + (busy > 0 ? $"  {busy:N0} row(s) are being processed and were left in." : "");
     }
 
-    private bool CanPreview() => HasStaged && !IsScanning;
+    /// <summary>Takes specific files back out of the worker queue (everything else goes back in order).</summary>
+    private static void DropFromWorkerQueue(HashSet<string> paths)
+    {
+        BlockingCollection<cFile> queue = MainQueue.bccFile;
+        var keep = new List<cFile>();
+        while (queue.TryTake(out cFile? item))
+            if (item != null && (item.fileId == -1 || !paths.Contains(item.filename)))
+                keep.Add(item);
+        foreach (cFile item in keep) queue.Add(item);
+        MainQueue.QueueChanged();
+    }
+
+    /// <summary>One line per row: filename, size and status, tab separated.</summary>
+    public static string RowsAsText(IEnumerable<samFile> rows, bool namesOnly) =>
+        string.Join(Environment.NewLine, rows.Select(r => namesOnly ? r.Name : $"{r.Name}\t{r.SizeText}\t{r.Status}"));
+
+    /// <summary>The whole list for SAVE LIST: CSV (Excel friendly) or tab separated text.</summary>
+    public string ListAsFile(bool csv)
+    {
+        static string Q(string s) => "\"" + s.Replace("\"", "\"\"") + "\"";
+        var sb = new System.Text.StringBuilder();
+        if (csv)
+        {
+            sb.AppendLine("Filename,Size (bytes),Size,Status");
+            foreach (samFile r in Files) sb.AppendLine($"{Q(r.Name)},{(r.Size >= 0 ? r.Size : 0)},{Q(r.SizeText)},{Q(r.Status)}");
+        }
+        else
+        {
+            sb.AppendLine("Filename\tSize\tStatus");
+            foreach (samFile r in Files) sb.AppendLine($"{r.Name}\t{r.SizeText}\t{r.Status}");
+        }
+        return sb.ToString();
+    }
+
+    public bool ConfirmRemove
+    {
+        get => _cfg.ConfirmRemove;
+        set { _cfg.ConfirmRemove = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
+    // =================================================================== start
 
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private async Task Start()
+    private void Start()
     {
-        ScanResult? scan = _preview != null && _preview.Input == SelectedInputType ? _preview : await ScanStaged();
-        _preview = null;
-        if (scan == null) return;
-
-        if (scan.Items.Count == 0)
-        {
-            Message = $"Nothing to do: no items match the input filter '{InputName}'.";
-            return;
-        }
+        List<samFile> pending = Files.Where(r => r.IsPending).ToList();
+        if (pending.Count == 0) return;
 
         bool fresh = !IsRunning;
         if (fresh)
         {
-            // New job: drop the previous results (and any preview rows).
-            ClearGrid();
+            DropFinishedRows(); // previous job's results go; the Queued rows stay
             _jobClock.Reset();
         }
 
-        var newRows = new List<samFile>(scan.Items.Count);
-        foreach (ScanItem item in scan.Items)
+        long bytes = 0;
+        foreach (samFile row in pending)
         {
-            var row = new samFile { Name = item.Path, Size = item.Size, Status = "Queued", IsQueued = true };
-            newRows.Add(row);
-            if (!_queuedByPath.TryGetValue(item.Path, out Queue<samFile>? q))
-                _queuedByPath[item.Path] = q = new Queue<samFile>();
+            row.IsPending = false;
+            row.IsQueued = true;
+            row.Status = "Waiting for a worker";
+            if (row.Size > 0) bytes += row.Size;
+            if (!_queuedByPath.TryGetValue(row.Name, out Queue<samFile>? q))
+                _queuedByPath[row.Name] = q = new Queue<samFile>();
             q.Enqueue(row);
         }
-        Files = fresh ? new ObservableCollection<samFile>(newRows) : new ObservableCollection<samFile>(Files.Concat(newRows));
-
-        FilesTotal += scan.Items.Count;
-        BytesTotal += scan.TotalBytes;
+        FilesTotal += pending.Count;
+        BytesTotal += bytes;
 
         Settings settings = new Settings()
         {
@@ -415,32 +539,27 @@ public partial class MainWindowViewModel : ViewModelBase
             DryRun = IsDryRun
         };
 
-        // Hand FileAdder the exact list we scanned (plus any leftover __*.tztmp temp files,
-        // which FileAdder deletes), so what runs is exactly what was previewed.
-        FileAdder pm = new FileAdder(MainQueue.bccFile, scan.HandOff.ToArray(), null, ProcessFileEndCallback, settings, MainQueue.pc);
+        // Hand FileAdder exactly the rows in the list (plus stray __*.tztmp files to delete).
+        string[] handOff = pending.Select(r => r.Name).Concat(_pendingJunk).ToArray();
+        _pendingJunk.Clear();
+        _stagedRoots.Clear();
+        _excluded.Clear();
+        _adderBusy = true;
+        FileAdder pm = new FileAdder(MainQueue.bccFile, handOff, null, ProcessFileEndCallback, settings, MainQueue.pc);
         Thread procT = new Thread(pm.ProcFiles) { IsBackground = true, Name = "SAM file adder" };
         procT.Start();
 
-        PathText = "";
-        Message = $"{(fresh ? "STARTED" : "ADDED")}: {scan.Items.Count:N0} item(s), {samFile.FormatSize(scan.TotalBytes)}  ->  {OutputName}{(IsDryRun ? "  [DRY RUN - nothing is written]" : "")}";
+        UpdatePending();
+        Message = $"{(fresh ? "STARTED" : "ADDED")}: {pending.Count:N0} item(s), {samFile.FormatSize(bytes)}  ->  {OutputName}{(IsDryRun ? "  [DRY RUN - nothing is written]" : "")}";
     }
 
-    private bool CanStart() => HasStaged && !IsScanning && !IsSoftStopping;
+    private bool CanStart() => HasPending && !IsScanning && !IsSoftStopping;
 
-    /// <summary>Scans the staged paths off the UI thread. Null if cancelled or nothing valid.</summary>
-    private async Task<ScanResult?> ScanStaged()
+    /// <summary>Scans paths off the UI thread, one scan at a time. Null if cancelled / failed.</summary>
+    private async Task<ScanResult?> Scan(List<string> paths)
     {
-        List<string> paths = StagedPaths();
-        List<string> missing = paths.Where(p => !File.Exists(p) && !Directory.Exists(p)).ToList();
-        if (missing.Count > 0)
-        {
-            Message = "PATH NOT FOUND: " + string.Join("  |  ", missing);
-            return null;
-        }
-        if (paths.Count == 0) return null;
-
-        _scanCts?.Cancel();
-        var cts = _scanCts = new CancellationTokenSource();
+        CancellationTokenSource cts = _scanCts ??= new CancellationTokenSource();
+        await _scanGate.WaitAsync();
         IsScanning = true;
         Message = "Scanning " + string.Join("  |  ", paths) + " ...";
         try
@@ -460,8 +579,8 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         finally
         {
-            if (ReferenceEquals(_scanCts, cts)) _scanCts = null;
             IsScanning = false;
+            _scanGate.Release();
         }
     }
 
@@ -584,7 +703,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(ResetDefaultsCommand))]
     private OutputType _selectedOutputType = OutputType.ZipTorrent;
 
-    partial void OnSelectedInputTypeChanged(InputZipType value) => _preview = null;
+    partial void OnSelectedInputTypeChanged(InputZipType value) => RescanPending();
 
     /// <summary>Dry Run is never remembered: it always starts off.</summary>
     [ObservableProperty]
@@ -883,9 +1002,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _speedText = "";
 
-    public string CounterText => FilesTotal == 0
-        ? "FILES  -"
-        : $"FILES  {FilesDone:N0} / {FilesTotal:N0}  ({OverallPercent:0.0}%)";
+    public string CounterText
+    {
+        get
+        {
+            string pend = HasPending ? $"QUEUED {PendingCount:N0} ({samFile.FormatSize(_pendingBytes)})" : "";
+            if (FilesTotal == 0) return HasPending ? pend : "FILES  -";
+            string s = $"FILES  {FilesDone:N0} / {FilesTotal:N0}  ({OverallPercent:0.0}%)";
+            return HasPending ? $"{s}    + {pend} not started" : s;
+        }
+    }
 
     public string ResultText => $"OK {FilesOk:N0}  FAIL {FilesFailed:N0}  SKIP {FilesSkipped:N0}";
 
@@ -999,7 +1125,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ProcessFileEndCallback(int processId, int fileId, TrrntZipStatus trrntZipStatus, ZipStructure zipStruct)
     {
         if (processId == -1)
+        {
+            OnUIThread(() => _adderBusy = false); // FileAdder has queued everything
             return;
+        }
 
         OnUIThread(() =>
         {
@@ -1111,7 +1240,8 @@ public partial class samFile : ObservableObject
     private bool _isQueued;
 
     [ObservableProperty]
-    private bool _isPreview;
+    [NotifyPropertyChangedFor(nameof(ProgressText))]
+    private bool _isPending;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGood))]
@@ -1141,7 +1271,7 @@ public partial class samFile : ObservableObject
         RowKind.Good => "OK",
         RowKind.Warn => "--",
         RowKind.Bad => "ERR",
-        _ => IsQueued ? "..." : "",
+        _ => IsQueued || IsPending ? "..." : "",
     };
 
     public string SizeText => FormatSize(Size);

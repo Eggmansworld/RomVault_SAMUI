@@ -5,11 +5,12 @@
         x:Class="SAM_UI_Avalonia.Views.SetupWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="SAM-UI // SETUP"
-        Width="560" SizeToContent="Height"
+        Width="560" SizeToContent="Height" MaxHeight="880"
         CanResize="False"
         WindowStartupLocation="CenterOwner">
     <Panel>
         <fx:VectorBackdrop Opacity="0.55"/>
+        <ScrollViewer>
         <StackPanel Margin="22,16,22,18" Spacing="10">
             <TextBlock Classes="h" FontSize="16" Text="══[ SETUP ]══" HorizontalAlignment="Center"/>
 
@@ -57,6 +58,14 @@
                 </StackPanel>
             </Border>
 
+            <!-- list -->
+            <Border Classes="panel" Padding="14,10">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h" Text="░▒▓ LIST"/>
+                    <CheckBox Content="ASK BEFORE REMOVING ROWS  (DEL / REMOVE)" IsChecked="{Binding ConfirmRemove}"/>
+                </StackPanel>
+            </Border>
+
             <!-- scroller text -->
             <Border Classes="panel" Padding="14,10" IsEnabled="{Binding ShowScroller}">
                 <StackPanel Spacing="6">
@@ -89,6 +98,7 @@
 
             <Button Classes="kg" Content="CLOSE" HorizontalAlignment="Center" MinWidth="120" Click="Close_Click" IsDefault="True" IsCancel="True"/>
         </StackPanel>
+        </ScrollViewer>
         <fx:Scanlines IsVisible="{Binding ScanlinesOn}"/>
     </Panel>
 </Window>

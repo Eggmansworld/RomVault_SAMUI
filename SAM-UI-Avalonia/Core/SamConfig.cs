@@ -30,6 +30,8 @@ public sealed class SamConfig
     public bool WindowMaximized { get; set; }
     /// <summary>Output list column widths (DONE, FILENAME, SIZE); STATUS fills the rest. Empty = defaults.</summary>
     public List<double> ColumnWidths { get; set; } = new();
+    /// <summary>Ask before DEL removes rows from the list.</summary>
+    public bool ConfirmRemove { get; set; } = true;
 
     // --- look
     public string Theme { get; set; } = Fx.Skin.All[0].Name;

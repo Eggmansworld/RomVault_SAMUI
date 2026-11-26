@@ -3,6 +3,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
@@ -39,10 +40,6 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         KeyDown += OnKey;
         PathBox.KeyDown += OnPathKey;
-
-        // Rows stay hit testable so the mouse wheel scrolls, so clear any
-        // selection a click would otherwise make.
-        FilesGrid.SelectionChanged += (_, _) => { if (FilesGrid.SelectedItem is not null) FilesGrid.SelectedItem = null; };
 
         // Follow the newest row being processed, at most 4x a second.
         _scrollTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) =>
@@ -256,10 +253,11 @@ public partial class MainWindow : Window
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         switch (e.Key)
         {
-            case Key.O when ctrl: PickFiles(append: e.KeyModifiers.HasFlag(KeyModifiers.Shift)); break;
-            case Key.D when ctrl: PickFolder(append: e.KeyModifiers.HasFlag(KeyModifiers.Shift)); break;
+            case Key.O when ctrl: PickFiles(); break;
+            case Key.D when ctrl: PickFolder(); break;
             case Key.Enter when ctrl: if (_vm.StartCommand.CanExecute(null)) _vm.StartCommand.Execute(null); break;
-            case Key.F5: if (_vm.PreviewCommand.CanExecute(null)) _vm.PreviewCommand.Execute(null); break;
+            case Key.S when ctrl: SaveList_Click(this, new RoutedEventArgs()); break;
+            case Key.Delete when e.Source is not TextBox: Remove_Click(this, new RoutedEventArgs()); break;
             case Key.Pause: if (_vm.PauseCommand.CanExecute(null)) _vm.PauseCommand.Execute(null); break;
             case Key.F1: Nfo_Click(this, new RoutedEventArgs()); break;
             case Key.F2: Setup_Click(this, new RoutedEventArgs()); break;
@@ -274,10 +272,10 @@ public partial class MainWindow : Window
 
     private void OnPathKey(object? sender, KeyEventArgs e)
     {
-        // Enter in the path box = PREVIEW (Ctrl+Enter = START, handled by the window).
-        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && _vm?.PreviewCommand.CanExecute(null) == true)
+        // Enter in the path box = ADD (Ctrl+Enter = START, handled by the window).
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && _vm?.AddPathCommand.CanExecute(null) == true)
         {
-            _vm.PreviewCommand.Execute(null);
+            _vm.AddPathCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -322,31 +320,102 @@ public partial class MainWindow : Window
         if (paths.Count == 0)
             return;
 
-        // Staged only - nothing starts until START.
-        _vm.Stage(paths, append: e.KeyModifiers.HasFlag(KeyModifiers.Control));
+        // Added to the list as Queued - nothing starts until START.
+        _vm.Stage(paths);
         Activate();
+    }
+
+    // =================================================================== list: remove / copy / save
+
+    private List<samFile> SelectedRows() =>
+        FilesGrid.SelectedItems.OfType<samFile>().OrderBy(r => _vm?.Files.IndexOf(r) ?? 0).ToList();
+
+    private async void Remove_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_vm == null) return;
+        List<samFile> rows = SelectedRows();
+        if (rows.Count == 0)
+        {
+            _vm.Message = "Select the rows to remove first (click, Ctrl+click, Shift+click), then press DEL.";
+            return;
+        }
+        if (App.Config.ConfirmRemove)
+        {
+            var (ok, dontAsk) = await ConfirmDialog.Ask(this, "REMOVE FROM LIST",
+                rows.Count == 1 ? $"Remove this row from the list?\n\n{rows[0].Name}" : $"Remove {rows.Count:N0} rows from the list?",
+                "Don't ask again (change it in SETUP)");
+            if (dontAsk) _vm.ConfirmRemove = false;
+            if (!ok) return;
+        }
+        _vm.RemoveRows(rows);
+    }
+
+    private void Grid_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.C && e.KeyModifiers == KeyModifiers.Control)
+        {
+            CopyRows(namesOnly: false);
+            e.Handled = true;
+        }
+    }
+
+    private void CopyLines_Click(object? sender, RoutedEventArgs e) => CopyRows(namesOnly: false);
+    private void CopyNames_Click(object? sender, RoutedEventArgs e) => CopyRows(namesOnly: true);
+    private void SelectAll_Click(object? sender, RoutedEventArgs e) => FilesGrid.SelectAll();
+
+    private async void CopyRows(bool namesOnly)
+    {
+        if (_vm == null || Clipboard == null) return;
+        List<samFile> rows = SelectedRows();
+        if (rows.Count == 0) { _vm.Message = "Select a row first, then Ctrl+C (or right-click > Copy)."; return; }
+        await Clipboard.SetTextAsync(MainWindowViewModel.RowsAsText(rows, namesOnly));
+        _vm.Message = $"Copied {rows.Count:N0} line(s) to the clipboard.";
+    }
+
+    private async void SaveList_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_vm == null) return;
+        if (_vm.Files.Count == 0) { _vm.Message = "The list is empty - nothing to save."; return; }
+        IStorageFile? file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "SAM-UI - save the list",
+            SuggestedFileName = $"SAM-UI list {DateTime.Now:yyyy-MM-dd HHmm}",
+            DefaultExtension = "csv",
+            ShowOverwritePrompt = true,
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("CSV (Excel)") { Patterns = new[] { "*.csv" } },
+                new FilePickerFileType("Text (tab separated)") { Patterns = new[] { "*.txt" } },
+            },
+        });
+        string? path = file?.TryGetLocalPath();
+        if (path == null) return;
+        try
+        {
+            bool csv = !path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+            await File.WriteAllTextAsync(path, _vm.ListAsFile(csv), new System.Text.UTF8Encoding(true));
+            _vm.Message = $"Saved {_vm.Files.Count:N0} row(s) to {path}";
+        }
+        catch (Exception ex)
+        {
+            _vm.Message = "Could not save the list: " + ex.Message;
+        }
     }
 
     // =================================================================== pickers
 
-    // Ctrl held while clicking FILES / FOLDER = add to what's already staged.
-    private void PickFiles_Click(object? sender, RoutedEventArgs e) => PickFiles(_modifiers.HasFlag(KeyModifiers.Control));
-    private void PickFolder_Click(object? sender, RoutedEventArgs e) => PickFolder(_modifiers.HasFlag(KeyModifiers.Control));
-
-    private KeyModifiers _modifiers;
-
-    protected override void OnKeyDown(KeyEventArgs e) { _modifiers = e.KeyModifiers; base.OnKeyDown(e); }
-    protected override void OnKeyUp(KeyEventArgs e) { _modifiers = e.KeyModifiers; base.OnKeyUp(e); }
+    private void PickFiles_Click(object? sender, RoutedEventArgs e) => PickFiles();
+    private void PickFolder_Click(object? sender, RoutedEventArgs e) => PickFolder();
 
     private async Task<IStorageFolder?> StartFolder()
     {
-        string? first = _vm?.StagedPaths().FirstOrDefault();
+        string? first = _vm?.Files.LastOrDefault()?.Name;
         string? dir = first == null ? null : Directory.Exists(first) ? first : Path.GetDirectoryName(first);
         if (dir == null || !Directory.Exists(dir)) return null;
         return await StorageProvider.TryGetFolderFromPathAsync(new Uri(dir));
     }
 
-    private async void PickFiles(bool append)
+    private async void PickFiles()
     {
         if (_vm == null) return;
         IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
@@ -361,10 +430,10 @@ public partial class MainWindow : Window
             },
         });
         List<string> paths = files.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
-        if (paths.Count > 0) _vm.Stage(paths, append);
+        if (paths.Count > 0) _vm.Stage(paths);
     }
 
-    private async void PickFolder(bool append)
+    private async void PickFolder()
     {
         if (_vm == null) return;
         IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -374,7 +443,7 @@ public partial class MainWindow : Window
             SuggestedStartLocation = await StartFolder(),
         });
         List<string> paths = folders.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
-        if (paths.Count > 0) _vm.Stage(paths, append);
+        if (paths.Count > 0) _vm.Stage(paths);
     }
 
     // =================================================================== jukebox
