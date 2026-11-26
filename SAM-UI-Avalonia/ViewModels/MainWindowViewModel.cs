@@ -312,7 +312,10 @@ public partial class MainWindowViewModel : ViewModelBase
     /// The paths are scanned with the current IN filter and every match is added to the list
     /// as "Queued". Nothing starts until START.
     /// </summary>
-    public async void Stage(IReadOnlyList<string> paths)
+    /// <param name="atTop">Put the new rows at the top of the list (they're processed first).</param>
+    /// <param name="intoRunningJob">If a job is running, hand the new rows to it straight away
+    /// (used by a second launch: "process these too") instead of waiting for ADD TO QUEUE.</param>
+    public async void Stage(IReadOnlyList<string> paths, bool atTop = false, bool intoRunningJob = false)
     {
         List<string> list = paths.Select(p => p.Trim().Trim('"').Trim()).Where(p => p.Length > 0)
                                  .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -327,7 +330,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
         ScanResult? scan = await Scan(list);
         if (scan == null) return;
-        var (added, bytes) = AddPendingRows(scan, reinclude: true);
+        var (added, bytes, rows) = AddPendingRows(scan, reinclude: true, atTop);
+
+        if (intoRunningJob && IsRunning && rows.Count > 0)
+        {
+            SubmitRows(rows, fresh: false);
+            if (atTop) SyncWorkerQueue(); // jump the queue: workers take them next
+            Message = $"ADDED {added:N0} item(s), {samFile.FormatSize(bytes)} to the running job, " +
+                      (atTop ? "at the TOP - they're processed next." : "at the BOTTOM - after what's already queued.");
+            return;
+        }
 
         Message = added == 0
             ? $"Nothing new added: no matches for the IN filter '{InputName}' (or already in the list)."
@@ -346,7 +358,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool CanAddPath() => PathText.Trim().Length > 0;
 
     /// <summary>Adds scan results as Queued rows (skipping ones already queued).</summary>
-    private (int Added, long Bytes) AddPendingRows(ScanResult scan, bool reinclude)
+    private (int Added, long Bytes, List<samFile> Rows) AddPendingRows(ScanResult scan, bool reinclude, bool atTop = false)
     {
         var queued = new HashSet<string>(Files.Where(r => r.IsPending).Select(r => r.Name), StringComparer.OrdinalIgnoreCase);
         var itemPaths = new HashSet<string>(scan.Items.Select(i => i.Path), StringComparer.OrdinalIgnoreCase);
@@ -362,9 +374,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         _pendingJunk.AddRange(scan.HandOff.Where(p => !itemPaths.Contains(p)));
         if (newRows.Count > 0)
-            Files = new ObservableCollection<samFile>(Files.Concat(newRows));
+            Files = new ObservableCollection<samFile>(atTop ? newRows.Concat(Files) : Files.Concat(newRows));
         UpdatePending();
-        return (newRows.Count, bytes);
+        return (newRows.Count, bytes, newRows);
     }
 
     /// <summary>Changing IN re-scans what was dropped (removed rows stay removed).</summary>
@@ -467,12 +479,113 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Takes specific files back out of the worker queue (everything else goes back in order).</summary>
     private static void DropFromWorkerQueue(HashSet<string> paths)
     {
-        BlockingCollection<cFile> queue = MainQueue.bccFile;
-        var keep = new List<cFile>();
-        while (queue.TryTake(out cFile? item))
-            if (item != null && (item.fileId == -1 || !paths.Contains(item.filename)))
-                keep.Add(item);
-        foreach (cFile item in keep) queue.Add(item);
+        // Count as a "producer" while the queue is briefly empty, so the job isn't seen as finished.
+        MainQueue.BeginProducing();
+        try
+        {
+            BlockingCollection<cFile> queue = MainQueue.bccFile;
+            var keep = new List<cFile>();
+            while (queue.TryTake(out cFile? item))
+                if (item != null && (item.fileId == -1 || !paths.Contains(item.filename)))
+                    keep.Add(item);
+            foreach (cFile item in keep) queue.Add(item);
+        }
+        finally
+        {
+            MainQueue.EndProducing();
+        }
+        MainQueue.QueueChanged();
+    }
+
+    // =================================================================== order (move / sort)
+
+    public enum MovePlace { Up, Down, Top, Bottom }
+
+    /// <summary>The worker queue needs re-ordering once FileAdder has finished feeding it.</summary>
+    private bool _resyncQueue;
+
+    /// <summary>
+    /// Moves the selected rows one place up / down, or to the top / bottom. The list order is the
+    /// processing order: rows already waiting for a worker are re-ordered in the worker queue too.
+    /// </summary>
+    public void MoveRows(IReadOnlyCollection<samFile> rows, MovePlace where)
+    {
+        var sel = new HashSet<samFile>(rows);
+        if (sel.Count == 0) return;
+        List<samFile> list = Files.ToList();
+        switch (where)
+        {
+            case MovePlace.Top:
+                list = list.Where(sel.Contains).Concat(list.Where(r => !sel.Contains(r))).ToList();
+                break;
+            case MovePlace.Bottom:
+                list = list.Where(r => !sel.Contains(r)).Concat(list.Where(sel.Contains)).ToList();
+                break;
+            case MovePlace.Up:
+                for (int i = 1; i < list.Count; i++)
+                    if (sel.Contains(list[i]) && !sel.Contains(list[i - 1]))
+                        (list[i - 1], list[i]) = (list[i], list[i - 1]);
+                break;
+            case MovePlace.Down:
+                for (int i = list.Count - 2; i >= 0; i--)
+                    if (sel.Contains(list[i]) && !sel.Contains(list[i + 1]))
+                        (list[i + 1], list[i]) = (list[i], list[i + 1]);
+                break;
+        }
+        Files = new ObservableCollection<samFile>(list);
+        SyncWorkerQueue();
+        Message = $"Moved {sel.Count:N0} row(s) {(where is MovePlace.Top or MovePlace.Bottom ? "to the " : "")}{where.ToString().ToUpperInvariant()}. Files are processed top to bottom.";
+    }
+
+    /// <summary>Column header click: re-orders the actual list (and so the processing order).</summary>
+    public void SortBy(string column, bool descending)
+    {
+        Func<samFile, object> key = column switch
+        {
+            "Size" => r => r.Size,
+            "Status" => r => r.Status,
+            _ => r => r.FileName,
+        };
+        IComparer<object> cmp = Comparer<object>.Create((a, b) =>
+            a is string sa && b is string sb ? StringComparer.OrdinalIgnoreCase.Compare(sa, sb) : Comparer<object>.Default.Compare(a, b));
+        List<samFile> list = descending ? Files.OrderByDescending(key, cmp).ToList() : Files.OrderBy(key, cmp).ToList();
+        Files = new ObservableCollection<samFile>(list);
+        SyncWorkerQueue();
+        string what = column switch { "Size" => descending ? "biggest first" : "smallest first", "Status" => descending ? "Z-A" : "A-Z", _ => descending ? "Z-A" : "A-Z" };
+        Message = $"List sorted by {column.ToUpperInvariant()} ({what}) - files are processed in this order. Click again to reverse.";
+    }
+
+    /// <summary>
+    /// Puts the files waiting in the worker queue in the same order as their rows in the list.
+    /// </summary>
+    private void SyncWorkerQueue()
+    {
+        if (MainQueue.bccFile.Count == 0) return;
+        if (_adderBusy) { _resyncQueue = true; return; } // FileAdder still feeding it: do it when it's done
+
+        MainQueue.BeginProducing(); // keeps the job "busy" while the queue is briefly empty
+        try
+        {
+            BlockingCollection<cFile> queue = MainQueue.bccFile;
+            var drained = new List<cFile>();
+            while (queue.TryTake(out cFile? item))
+                if (item != null) drained.Add(item);
+
+            var ordered = drained.Where(c => c.fileId == -1).ToList(); // worker shut-down markers first
+            var byName = drained.Where(c => c.fileId != -1)
+                .GroupBy(c => c.filename, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => new Queue<cFile>(g), StringComparer.OrdinalIgnoreCase);
+            foreach (samFile row in Files)
+                if (row.IsQueued && byName.TryGetValue(row.Name, out Queue<cFile>? q) && q.Count > 0)
+                    ordered.Add(q.Dequeue());
+            foreach (Queue<cFile> q in byName.Values) ordered.AddRange(q); // anything without a row keeps its place at the end
+
+            foreach (cFile c in ordered) queue.Add(c);
+        }
+        finally
+        {
+            MainQueue.EndProducing();
+        }
         MainQueue.QueueChanged();
     }
 
@@ -511,8 +624,12 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         List<samFile> pending = Files.Where(r => r.IsPending).ToList();
         if (pending.Count == 0) return;
+        SubmitRows(pending, fresh: !IsRunning);
+    }
 
-        bool fresh = !IsRunning;
+    /// <summary>Hands Queued rows to the workers (in list order).</summary>
+    private void SubmitRows(List<samFile> rows, bool fresh)
+    {
         if (fresh)
         {
             DropFinishedRows(); // previous job's results go; the Queued rows stay
@@ -520,7 +637,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         long bytes = 0;
-        foreach (samFile row in pending)
+        foreach (samFile row in rows)
         {
             row.IsPending = false;
             row.IsQueued = true;
@@ -530,7 +647,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 _queuedByPath[row.Name] = q = new Queue<samFile>();
             q.Enqueue(row);
         }
-        FilesTotal += pending.Count;
+        FilesTotal += rows.Count;
         BytesTotal += bytes;
 
         Settings settings = new Settings()
@@ -541,20 +658,22 @@ public partial class MainWindowViewModel : ViewModelBase
             DryRun = IsDryRun
         };
 
-        // Hand FileAdder exactly the rows in the list (plus stray __*.tztmp files to delete).
-        string[] handOff = pending.Select(r => r.Name).Concat(_pendingJunk).ToArray();
+        // Hand FileAdder exactly these rows (plus stray __*.tztmp files to delete).
+        string[] handOff = rows.Select(r => r.Name).Concat(_pendingJunk).ToArray();
         _pendingJunk.Clear();
-        _stagedRoots.Clear();
-        _excluded.Clear();
         _adderBusy = true;
         FileAdder pm = new FileAdder(MainQueue.bccFile, handOff, null, ProcessFileEndCallback, settings, MainQueue.pc);
         Thread procT = new Thread(pm.ProcFiles) { IsBackground = true, Name = "SAM file adder" };
         procT.Start();
 
         UpdatePending();
-        Message = $"{(fresh ? "STARTED" : "ADDED")}: {pending.Count:N0} item(s), {samFile.FormatSize(bytes)}  ->  {OutputName}{(IsDryRun ? "  [DRY RUN - nothing is written]" : "")}";
+        if (!HasPending)
+        {
+            _stagedRoots.Clear();
+            _excluded.Clear();
+        }
+        Message = $"{(fresh ? "STARTED" : "ADDED")}: {rows.Count:N0} item(s), {samFile.FormatSize(bytes)}  ->  {OutputName}{(IsDryRun ? "  [DRY RUN - nothing is written]" : "")}";
     }
-
     private bool CanStart() => HasPending && !IsScanning && !IsSoftStopping;
 
     /// <summary>Scans paths off the UI thread, one scan at a time. Null if cancelled / failed.</summary>
@@ -1128,7 +1247,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (processId == -1)
         {
-            OnUIThread(() => _adderBusy = false); // FileAdder has queued everything
+            OnUIThread(() =>
+            {
+                _adderBusy = false; // FileAdder has queued everything
+                if (_resyncQueue) { _resyncQueue = false; SyncWorkerQueue(); }
+            });
             return;
         }
 

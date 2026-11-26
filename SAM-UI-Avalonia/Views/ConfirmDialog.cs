@@ -47,6 +47,50 @@ public sealed class ConfirmDialog : Window
         };
     }
 
+    /// <summary>
+    /// Several buttons: returns the index of the one clicked, or -1 if the window was closed / Esc.
+    /// The first button is the default (Enter).
+    /// </summary>
+    public static async Task<int> Choose(Window owner, string title, string message, params string[] buttons)
+    {
+        int choice = -1;
+        var dlg = new Window
+        {
+            Title = "SAM-UI // " + title,
+            Width = 560,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ShowInTaskbar = false,
+            Icon = owner.Icon,
+            Topmost = true,
+        };
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Right };
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            int idx = i;
+            var b = new Button { Content = buttons[i], MinWidth = 110, IsDefault = i == 0 };
+            b.Classes.Add("kg");
+            if (i == 0) b.Classes.Add("go");
+            b.Click += (_, _) => { choice = idx; dlg.Close(); };
+            row.Children.Add(b);
+        }
+        var header = new TextBlock { Text = "══[ " + title + " ]══" };
+        header.Classes.Add("h");
+        dlg.Content = new Border
+        {
+            Padding = new Thickness(20, 16),
+            Child = new StackPanel
+            {
+                Spacing = 12,
+                Children = { header, new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, FontSize = 13 }, row },
+            },
+        };
+        dlg.KeyDown += (_, e) => { if (e.Key == Key.Escape) dlg.Close(); };
+        await dlg.ShowDialog(owner);
+        return choice;
+    }
+
     /// <returns>(answer, "don't ask again" ticked)</returns>
     public static async Task<(bool Ok, bool DontAsk)> Ask(Window owner, string title, string message, string? dontAskText = null)
     {

@@ -83,6 +83,8 @@ $@"  ░▒▓ RELEASE iNFO ▓▒░
                 OUT = the format to make. Changing IN re-scans the list.
                 Select rows (Ctrl/Shift+click) and press DEL to drop them.
                 Right-click a row to copy it, SAVE LIST writes a CSV.
+                The list is processed top to bottom: MOVE rows, or click a
+                column header to sort the list (and the processing order).
     [3] START   Rows go  Queued -> Processing (bar behind the name)
                 -> result. START while running = ADD TO QUEUE.
 
@@ -106,6 +108,7 @@ $@"  ░▒▓ RELEASE iNFO ▓▒░
     CTRL+O  pick files          CTRL+D      pick folders
     DEL     remove rows         CTRL+ENTER  start
     CTRL+C  copy rows           CTRL+S      save the list
+    CTRL+UP / DOWN   move rows      CTRL+HOME / END  rows to top / bottom
     PAUSE   pause / resume      F1          this NFO
     F2      SETUP (themes, effects, music)
     ENTER in the PATH box = add that path

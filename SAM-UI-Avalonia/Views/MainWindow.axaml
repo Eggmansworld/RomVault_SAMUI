@@ -141,6 +141,12 @@
                                    TextWrapping="Wrap" FontSize="12"
                                    Classes.warn="{Binding IsOffDefault}" Classes.dim="{Binding !IsOffDefault}"/>
                         <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4">
+                            <TextBlock Classes="lbl" Text="MOVE ►" FontSize="10" Margin="0,0,2,0"/>
+                            <Button Classes="kg small" Content="⤒ TOP" Click="MoveTop_Click" ToolTip.Tip="Move the selected rows to the top: processed first (Ctrl+Home)"/>
+                            <Button Classes="kg small" Content="▲" Click="MoveUp_Click" ToolTip.Tip="Move the selected rows up one place (Ctrl+Up)"/>
+                            <Button Classes="kg small" Content="▼" Click="MoveDown_Click" ToolTip.Tip="Move the selected rows down one place (Ctrl+Down)"/>
+                            <Button Classes="kg small" Content="⤓ BOTTOM" Click="MoveBottom_Click" ToolTip.Tip="Move the selected rows to the bottom: processed last (Ctrl+End)"/>
+                            <Border Width="2" Background="{DynamicResource SamBorder}" Margin="6,2"/>
                             <Button Classes="kg small" Content="SETUP" Click="Setup_Click" ToolTip.Tip="Theme, effects and music options (F2)"/>
                             <Button Classes="kg small" Content="NFO" Click="Nfo_Click" ToolTip.Tip="About / help (F1)"/>
                         </StackPanel>
@@ -177,6 +183,21 @@
                             <MenuItem Header="Copy filename(s)" Click="CopyNames_Click"/>
 
                             <Separator/>
+
+                            <MenuItem Header="Move to top" InputGesture="Ctrl+Home" Click="MoveTop_Click"/>
+
+
+                            <MenuItem Header="Move up" InputGesture="Ctrl+Up" Click="MoveUp_Click"/>
+
+
+                            <MenuItem Header="Move down" InputGesture="Ctrl+Down" Click="MoveDown_Click"/>
+
+
+                            <MenuItem Header="Move to bottom" InputGesture="Ctrl+End" Click="MoveBottom_Click"/>
+
+
+                            <Separator/>
+
 
                             <MenuItem Header="Remove from list" InputGesture="Delete" Click="Remove_Click"/>
 

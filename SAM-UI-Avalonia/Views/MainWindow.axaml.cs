@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         Closing += OnClosing;
         KeyDown += OnKey;
         PathBox.KeyDown += OnPathKey;
+        FilesGrid.AddHandler(KeyDownEvent, OnGridPreviewKey, Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
         // Follow the newest row being processed, at most 4x a second.
         _scrollTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) =>
@@ -196,32 +197,65 @@ public partial class MainWindow : Window
         _hooked?.Dispose();
         _hooked = _vm == null ? null : new ObservableCollectionHook(_vm.Files, OnFilesChanged);
         UpdateEmptyState();
-        // the list is rebuilt when rows are added / a job starts: keep the user's sort
-        Dispatcher.UIThread.Post(ReapplySort, DispatcherPriority.Background);
+        if (!_sortHooked) { FilesGrid.Sorting += OnGridSorting; _sortHooked = true; }
     }
 
-    // =================================================================== sorting
+    // =================================================================== sorting + moving
 
     private string? _sortPath;
-    private ListSortDirection _sortDir;
+    private bool _sortDesc;
     private bool _sortHooked;
 
-    /// <summary>After a header click, note which column / direction is now sorted.</summary>
-    private void OnGridSorting(object? sender, DataGridColumnEventArgs e) =>
+    /// <summary>
+    /// Header click: instead of the grid sorting only what's displayed, re-order the real list,
+    /// so files are processed in the order you see. Click again to reverse.
+    /// </summary>
+    private void OnGridSorting(object? sender, DataGridColumnEventArgs e)
+    {
+        e.Handled = true;
+        string? path = e.Column.SortMemberPath;
+        if (_vm == null || string.IsNullOrEmpty(path)) return;
+        _sortDesc = _sortPath == path && !_sortDesc;
+        _sortPath = path;
+        _vm.SortBy(path, _sortDesc);
+    }
+
+    private void Move(MainWindowViewModel.MovePlace where)
+    {
+        if (_vm == null) return;
+        List<samFile> rows = SelectedRows();
+        if (rows.Count == 0) { _vm.Message = "Select the rows to move first (click, Ctrl+click, Shift+click)."; return; }
+        _sortPath = null; // a manual order now
+        _vm.MoveRows(rows, where);
+        // the list was rebuilt: select the same rows again so you can keep moving them
         Dispatcher.UIThread.Post(() =>
         {
-            var sd = FilesGrid.CollectionView?.SortDescriptions.FirstOrDefault();
-            _sortPath = sd?.PropertyPath;
-            _sortDir = sd?.Direction ?? ListSortDirection.Ascending;
+            FilesGrid.SelectedItems.Clear();
+            foreach (samFile r in rows) FilesGrid.SelectedItems.Add(r);
+            FilesGrid.ScrollIntoView(where is MainWindowViewModel.MovePlace.Down or MainWindowViewModel.MovePlace.Bottom ? rows[^1] : rows[0], null);
         }, DispatcherPriority.Background);
+    }
 
-    private void ReapplySort()
+    private void MoveTop_Click(object? sender, RoutedEventArgs e) => Move(MainWindowViewModel.MovePlace.Top);
+    private void MoveUp_Click(object? sender, RoutedEventArgs e) => Move(MainWindowViewModel.MovePlace.Up);
+    private void MoveDown_Click(object? sender, RoutedEventArgs e) => Move(MainWindowViewModel.MovePlace.Down);
+    private void MoveBottom_Click(object? sender, RoutedEventArgs e) => Move(MainWindowViewModel.MovePlace.Bottom);
+
+    /// <summary>Ctrl+Up / Down / Home / End move the selected rows (caught before the grid uses them).</summary>
+    private void OnGridPreviewKey(object? sender, KeyEventArgs e)
     {
-        if (!_sortHooked) { FilesGrid.Sorting += OnGridSorting; _sortHooked = true; }
-        if (_sortPath == null) return;
-        if (FilesGrid.CollectionView?.SortDescriptions.Count > 0) return; // still sorted
-        DataGridColumn? col = FilesGrid.Columns.FirstOrDefault(c => c.SortMemberPath == _sortPath);
-        col?.Sort(_sortDir);
+        if (e.KeyModifiers != KeyModifiers.Control) return;
+        MainWindowViewModel.MovePlace? where = e.Key switch
+        {
+            Key.Up => MainWindowViewModel.MovePlace.Up,
+            Key.Down => MainWindowViewModel.MovePlace.Down,
+            Key.Home => MainWindowViewModel.MovePlace.Top,
+            Key.End => MainWindowViewModel.MovePlace.Bottom,
+            _ => null,
+        };
+        if (where == null) return;
+        Move(where.Value);
+        e.Handled = true;
     }
 
     private void OnFilesChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateEmptyState();

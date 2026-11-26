@@ -1,5 +1,14 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.5.0 – 2026-11-26 – you choose the order
+- **The list is processed top to bottom**, including files already waiting for a worker during a job (the worker queue is re-ordered to match the list).
+- **Move rows:** select one or more (Ctrl/Shift+click), then **MOVE ► ⤒ TOP / ▲ / ▼ / ⤓ BOTTOM** on the DEFAULT row, right-click > Move…, or **Ctrl+Home / Ctrl+Up / Ctrl+Down / Ctrl+End**. The rows stay selected so you can keep moving them.
+- **Column headers now sort the actual list**, and so the processing order. Click again to reverse. Previously only the display was sorted.
+- **Second launch with files while SAM-UI has work in it:** a prompt asks **TOP (NEXT UP)**, **BOTTOM** or **CANCEL**.
+  - During a job, TOP files go straight into it and are processed as soon as a worker is free, ahead of everything waiting. BOTTOM files go into the job after what's already queued.
+  - When idle, they're placed at the top or bottom of the list.
+  - With an empty list there's no prompt.
+
 ## v1.4.2 – 2026-11-26
 - **One SAM-UI at a time.** Launching it while it's already open no longer opens a second window, with a second set of workers that could go past the 80% CPU cap.
   - Launched with files/folders (Explorer "Send To", a shortcut, dropping onto the exe), it adds them to the open window's list as Queued and brings that window to the front. Relative paths work.

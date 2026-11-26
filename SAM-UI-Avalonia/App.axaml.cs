@@ -53,10 +53,7 @@ namespace SAM_UI_Avalonia
                     else if (cmd == "jukebox next") Jukebox.Next();
                     else if (cmd == "show") BringToFront(desktop.MainWindow);
                     else if (cmd.StartsWith("stage|", StringComparison.Ordinal))
-                    {
-                        vm.Stage(cmd.Substring(6).Split('|', StringSplitOptions.RemoveEmptyEntries));
-                        BringToFront(desktop.MainWindow);
-                    }
+                        AddFromSecondLaunch(desktop.MainWindow, vm, cmd.Substring(6).Split('|', StringSplitOptions.RemoveEmptyEntries));
                 }));
 
                 // Paths on the command line (e.g. from an Explorer "Send To" shortcut) are
@@ -73,6 +70,28 @@ namespace SAM_UI_Avalonia
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        /// <summary>
+        /// Files from a second launch. If there's already work in the list, ask where they go:
+        /// TOP (processed next - straight into a running job, ahead of what's waiting) or BOTTOM.
+        /// </summary>
+        private static async void AddFromSecondLaunch(Avalonia.Controls.Window? w, MainWindowViewModel vm, string[] paths)
+        {
+            BringToFront(w);
+            if (w == null || paths.Length == 0) return;
+            if (!vm.IsRunning && !vm.HasPending)
+            {
+                vm.Stage(paths);
+                return;
+            }
+
+            string what = paths.Length == 1 ? Path.GetFileName(paths[0].TrimEnd('\\')) : $"{paths.Length} files / folders";
+            string msg = vm.IsRunning
+                ? $"A job is running. Where should {what} go?\n\nTOP: processed next, as soon as a worker is free.\nBOTTOM: after everything already in the queue."
+                : $"Add {what} to the TOP or the BOTTOM of the list?";
+            int c = await ConfirmDialog.Choose(w, "ADD FILES", msg, "TOP (NEXT UP)", "BOTTOM", "CANCEL");
+            if (c is 0 or 1) vm.Stage(paths, atTop: c == 0, intoRunningJob: true);
         }
 
         private static void BringToFront(Avalonia.Controls.Window? w)
