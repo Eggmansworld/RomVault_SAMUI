@@ -85,6 +85,8 @@
                 <StackPanel Spacing="6">
                     <TextBlock Classes="h" Text="░▒▓ JUKEBOX"/>
                     <CheckBox Content="AUTO-PLAY MUSIC WHEN SAM-UI STARTS" IsChecked="{Binding AutoPlayMusic}"/>
+                    <CheckBox Content="EVEN OUT SONG VOLUMES (applies from the next song)" IsChecked="{Binding NormalizeVolume}"
+                              ToolTip.Tip="Each song is measured before it plays and turned up or down to a common loudness"/>
                     <Grid ColumnDefinitions="110,*">
                         <TextBlock Classes="lbl" Text="START SONG ►"/>
                         <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"

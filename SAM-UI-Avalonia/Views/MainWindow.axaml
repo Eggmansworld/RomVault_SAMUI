@@ -254,6 +254,15 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
+                        <DataGridTemplateColumn Header="SIZE (BYTES)" SortMemberPath="Size" Width="140" MinWidth="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:samFile">
+                                    <TextBlock Text="{Binding SizeBytesText}" Margin="6,0" FontSize="12"
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
                         <DataGridTemplateColumn Header="STATUS" SortMemberPath="Status" Width="*" MinWidth="180">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:samFile">

@@ -16,7 +16,7 @@ public sealed class SamConfig
 {
     /// <summary>Bumped when a new release changes a default that should replace old saved values.</summary>
     public int ConfigVersion { get; set; }
-    private const int CurrentVersion = 2;
+    private const int CurrentVersion = 3;
 
     // --- processing (the user's saved defaults; the app always starts on these)
     public InputZipType DefaultInput { get; set; } = InputZipType.Zip;
@@ -57,7 +57,9 @@ public sealed class SamConfig
     public bool JukeboxEnabled { get; set; }
     public string? JukeboxTune { get; set; }
     public int JukeboxSub { get; set; }
-    public int JukeboxVolume { get; set; } = 50;
+    public int JukeboxVolume { get; set; } = 40;
+    /// <summary>Even out loud / quiet tunes (each tune is measured before it plays).</summary>
+    public bool NormalizeVolume { get; set; } = true;
     public int SidSeconds { get; set; } = 180;
     public bool JukeboxShuffle { get; set; }
     /// <summary>Per SID file name (lower case): subtunes to play. Missing = all music subtunes.</summary>
@@ -86,6 +88,8 @@ public sealed class SamConfig
                     cfg.JukeboxVolume = 50; // v1.2 default: half volume
                     cfg.DefaultThreads = 2;
                 }
+                if (cfg.ConfigVersion < 3 && cfg.JukeboxVolume == 50)
+                    cfg.JukeboxVolume = 40; // v1.5.1 default (only if it was never changed)
                 cfg.ConfigVersion = CurrentVersion;
                 return cfg;
             }

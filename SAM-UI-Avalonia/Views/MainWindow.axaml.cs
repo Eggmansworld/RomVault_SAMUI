@@ -179,6 +179,7 @@ public partial class MainWindow : Window
         if (_vm != null)
         {
             _vm.RowStarted += OnRowStarted;
+            _vm.StageRequested = p => AddPaths(p);
             _vm.PropertyChanged += OnVmPropertyChanged;
         }
         HookFiles();
@@ -380,9 +381,30 @@ public partial class MainWindow : Window
         if (paths.Count == 0)
             return;
 
-        // Added to the list as Queued - nothing starts until START.
-        _vm.Stage(paths);
+        // Added to the list as Queued (asks TOP / BOTTOM if a job is running)
+        AddPaths(paths);
         Activate();
+    }
+
+    // =================================================================== adding
+
+    /// <summary>
+    /// Every way of adding files ends up here. While a job is running (or for a second launch
+    /// when there's already work queued) it asks TOP (next up) or BOTTOM; TOP / BOTTOM files go
+    /// straight into the running job. Otherwise they're simply added to the bottom of the list.
+    /// </summary>
+    public async void AddPaths(IReadOnlyList<string> paths, bool fromSecondLaunch = false)
+    {
+        if (_vm == null || paths.Count == 0) return;
+        bool ask = _vm.IsRunning || (fromSecondLaunch && _vm.HasPending);
+        if (!ask) { _vm.Stage(paths); return; }
+
+        string what = paths.Count == 1 ? Path.GetFileName(paths[0].TrimEnd('\\')) : $"{paths.Count} files / folders";
+        string msg = _vm.IsRunning
+            ? $"A job is running. Where should {what} go?\n\nTOP: next in line, processed as soon as a worker is free.\nBOTTOM: after everything already in the queue."
+            : $"Add {what} to the TOP or the BOTTOM of the list?";
+        int c = await ConfirmDialog.Choose(this, "ADD FILES", msg, "TOP (NEXT UP)", "BOTTOM", "CANCEL");
+        if (c is 0 or 1) _vm.Stage(paths, atTop: c == 0, intoRunningJob: true);
     }
 
     // =================================================================== list: remove / copy / save
@@ -490,7 +512,7 @@ public partial class MainWindow : Window
             },
         });
         List<string> paths = files.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
-        if (paths.Count > 0) _vm.Stage(paths);
+        if (paths.Count > 0) AddPaths(paths);
     }
 
     private async void PickFolder()
@@ -503,7 +525,7 @@ public partial class MainWindow : Window
             SuggestedStartLocation = await StartFolder(),
         });
         List<string> paths = folders.Select(f => f.TryGetLocalPath()).Where(p => !string.IsNullOrEmpty(p)).Select(p => p!).ToList();
-        if (paths.Count > 0) _vm.Stage(paths);
+        if (paths.Count > 0) AddPaths(paths);
     }
 
     // =================================================================== jukebox

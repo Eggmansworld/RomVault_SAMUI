@@ -1,5 +1,16 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.5.1 – 2026-11-26
+- **Fix: added files moved to the top weren't processed next.** ADD TO QUEUE hands files to RomVault's FileAdder, which always appends to the end of the worker queue, and nothing re-ordered it afterwards. Every submission now re-syncs the worker queue to the list order once FileAdder is done.
+- **TOP now means "next in line":** moved / added rows go directly under the last row that's processing or finished, not above the files already converted.
+- **Adding files during a job always asks TOP (NEXT UP) / BOTTOM** (drag & drop, FILES / FOLDER, the PATH box and second launches), and the files go straight into the running job.
+- **Jukebox loudness normalisation:**
+  - Each tune's first 45 s is measured silently before it plays (cached for the session; all 21 bundled tunes measure in about 2.6 s).
+  - Playback is turned up or down to a common level, capped so peaks never clip. The bundled tunes varied about 10× (~20 dB); "Dead lock (Elwood)" now plays at 0.60×.
+  - It can be switched off in SETUP ("EVEN OUT SONG VOLUMES").
+- **Default jukebox volume 40%** (was 50%). Existing settings still at the old 50% default move to 40%; any other saved volume is kept.
+- **SIZE (BYTES)** column next to SIZE, with exact byte counts, e.g. 37,748,844. Sortable.
+
 ## v1.5.0 – 2026-11-26 – you choose the order
 - **The list is processed top to bottom**, including files already waiting for a worker during a job (the worker queue is re-ordered to match the list).
 - **Move rows:** select one or more (Ctrl/Shift+click), then **MOVE ► ⤒ TOP / ▲ / ▼ / ⤓ BOTTOM** on the DEFAULT row, right-click > Move…, or **Ctrl+Home / Ctrl+Up / Ctrl+Down / Ctrl+End**. The rows stay selected so you can keep moving them.

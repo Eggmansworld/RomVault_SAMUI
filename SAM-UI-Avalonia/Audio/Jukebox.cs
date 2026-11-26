@@ -336,13 +336,15 @@ public sealed class Jukebox
         try
         {
             ITuneSource src = await Task.Run<ITuneSource>(() =>
-                Path.GetExtension(e.Path).Equals(".sid", StringComparison.OrdinalIgnoreCase)
-                    ? new SidSource(e.Path, e.Sub)
-                    : new ModSource(e.Path));
+            {
+                // measure the tune first (cached) so every song plays at about the same loudness
+                double gain = _cfg.NormalizeVolume ? Loudness.GainFor(e.Path, e.Sub) : 1.0;
+                return new NormalizedSource(Loudness.Open(e.Path, e.Sub), gain);
+            });
             if (gen != _gen) { src.Dispose(); return; } // user skipped while loading
             Title = src.Title;
             Format = src.Format;
-            Duration = src.Duration > 0 ? src.Duration : (src is SidSource ? _cfg.SidSeconds : 0);
+            Duration = src.Duration > 0 ? src.Duration : (src is NormalizedSource { Inner: SidSource } ? _cfg.SidSeconds : 0);
             _failStreak = 0;
             _out.Play(src);
             if (_cfg.JukeboxEnabled) _timer.Start();
@@ -362,12 +364,14 @@ public sealed class Jukebox
         }
     }
 
+    private bool PlayingSid => _out.Source is SidSource or NormalizedSource { Inner: SidSource };
+
     private DateTime _quietSince = DateTime.MaxValue;
 
     private void Tick()
     {
         // SID sound-effect subtunes go silent after a second: move on after 3 s of silence
-        if (_out.Source is SidSource && _out.IsRunning && !_endFading && Position > 1)
+        if (PlayingSid && _out.IsRunning && !_endFading && Position > 1)
         {
             if (_out.LastPeak < 60) { if (_quietSince == DateTime.MaxValue) _quietSince = DateTime.Now; }
             else _quietSince = DateTime.MaxValue;
@@ -376,7 +380,7 @@ public sealed class Jukebox
         else _quietSince = DateTime.MaxValue;
 
         // SIDs never end by themselves: fade and move on after the configured time
-        if (_out.Source is SidSource && !_endFading && Position >= _cfg.SidSeconds && _cfg.SidSeconds > 0)
+        if (PlayingSid && !_endFading && Position >= _cfg.SidSeconds && _cfg.SidSeconds > 0)
         {
             _endFading = true;
             _out.FadeOutAndPause(3.0);

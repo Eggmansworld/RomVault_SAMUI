@@ -352,10 +352,14 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         string[] paths = PathText.Split('|');
         PathText = "";
-        Stage(paths);
+        if (StageRequested != null) StageRequested(paths); // the window may ask TOP / BOTTOM first
+        else Stage(paths);
     }
 
     private bool CanAddPath() => PathText.Trim().Length > 0;
+
+    /// <summary>Set by the window so typed paths get the same TOP / BOTTOM prompt as drops.</summary>
+    public Action<IReadOnlyList<string>>? StageRequested { get; set; }
 
     /// <summary>Adds scan results as Queued rows (skipping ones already queued).</summary>
     private (int Added, long Bytes, List<samFile> Rows) AddPendingRows(ScanResult scan, bool reinclude, bool atTop = false)
@@ -374,7 +378,11 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         _pendingJunk.AddRange(scan.HandOff.Where(p => !itemPaths.Contains(p)));
         if (newRows.Count > 0)
-            Files = new ObservableCollection<samFile>(atTop ? newRows.Concat(Files) : Files.Concat(newRows));
+            {
+                List<samFile> all = Files.ToList();
+                all.InsertRange(atTop ? NextUpIndex(all) : all.Count, newRows);
+                Files = new ObservableCollection<samFile>(all);
+            }
         UpdatePending();
         return (newRows.Count, bytes, newRows);
     }
@@ -516,8 +524,15 @@ public partial class MainWindowViewModel : ViewModelBase
         switch (where)
         {
             case MovePlace.Top:
-                list = list.Where(sel.Contains).Concat(list.Where(r => !sel.Contains(r))).ToList();
+            {
+                // "Top" = next in line: straight under the last row that's processing / done
+                // (rows above that are history), not above the files already converted.
+                List<samFile> rest = list.Where(r => !sel.Contains(r)).ToList();
+                int at = NextUpIndex(rest);
+                rest.InsertRange(at, list.Where(sel.Contains));
+                list = rest;
                 break;
+            }
             case MovePlace.Bottom:
                 list = list.Where(r => !sel.Contains(r)).Concat(list.Where(sel.Contains)).ToList();
                 break;
@@ -535,6 +550,15 @@ public partial class MainWindowViewModel : ViewModelBase
         Files = new ObservableCollection<samFile>(list);
         SyncWorkerQueue();
         Message = $"Moved {sel.Count:N0} row(s) {(where is MovePlace.Top or MovePlace.Bottom ? "to the " : "")}{where.ToString().ToUpperInvariant()}. Files are processed top to bottom.";
+    }
+
+    /// <summary>Where "next up" rows go: just under the last row that's processing or finished.</summary>
+    private static int NextUpIndex(IList<samFile> rows)
+    {
+        for (int i = rows.Count - 1; i >= 0; i--)
+            if (rows[i].IsProcessing || (!rows[i].IsPending && !rows[i].IsQueued))
+                return i + 1;
+        return 0;
     }
 
     /// <summary>Column header click: re-orders the actual list (and so the processing order).</summary>
@@ -662,6 +686,7 @@ public partial class MainWindowViewModel : ViewModelBase
         string[] handOff = rows.Select(r => r.Name).Concat(_pendingJunk).ToArray();
         _pendingJunk.Clear();
         _adderBusy = true;
+        _resyncQueue = true; // FileAdder appends to the END of the worker queue: re-order to match the list when it's done
         FileAdder pm = new FileAdder(MainQueue.bccFile, handOff, null, ProcessFileEndCallback, settings, MainQueue.pc);
         Thread procT = new Thread(pm.ProcFiles) { IsBackground = true, Name = "SAM file adder" };
         procT.Start();
@@ -1044,6 +1069,12 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    public bool NormalizeVolume
+    {
+        get => _cfg.NormalizeVolume;
+        set { _cfg.NormalizeVolume = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
     public bool AutoPlayMusic
     {
         get => _cfg.AutoPlayMusic;
@@ -1347,6 +1378,7 @@ public partial class samFile : ObservableObject
     /// <summary>Original size in bytes (folder total in Directory mode), -1 if unknown.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SizeText))]
+    [NotifyPropertyChangedFor(nameof(SizeBytesText))]
     private long _size = -1;
 
     /// <summary>Percent complete (0-100) while this file is being processed.</summary>
@@ -1401,6 +1433,9 @@ public partial class samFile : ObservableObject
     };
 
     public string SizeText => FormatSize(Size);
+
+    /// <summary>Exact size, e.g. "1,234,567,890".</summary>
+    public string SizeBytesText => Size >= 0 ? Size.ToString("N0") : "";
 
     /// <summary>Just the file / folder name (for sorting the FILENAME column A-Z).</summary>
     public string FileName => Path.GetFileName(Name.TrimEnd('\\', '/'));
