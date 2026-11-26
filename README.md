@@ -1,9 +1,9 @@
-# RomVault_SAMUI
+# RomVault's SAM-UI (Eggman Edition)
 
 Eggman's devilish twist on RomVault's boring SAMUI app. Enjoy!
 
 **SAM-UI (Eggman Edition)** is a fork of the SAM-UI-Avalonia front-end from
-[RomVault's RVWorld](https://github.com/RomVault/RVWorld). It recompresses files, folders and
+[RomVault's RVWorld](https://github.com/RomVault/RVWorld). It bulk recompresses files, folders and
 zip/7z archives into TorrentZip, Zip-ZSTD, 7Z-ZSTD and 7Z-LZMA, using RomVault's SAM/TrrntZip engine.
 
 <img width="2524" height="1622" alt="image" src="https://github.com/user-attachments/assets/a25ae073-06c6-4664-aae8-94fcd79cfdd9" />
