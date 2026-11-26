@@ -187,6 +187,9 @@
                                                      Foreground="{DynamicResource SamProgressFill}" Background="Transparent"
                                                      MinHeight="0" MinWidth="0" Height="20" Margin="0,1"
                                                      VerticalAlignment="Stretch"/>
+                                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsStarting}"
+                                                     Height="3" MinHeight="0" MinWidth="0" VerticalAlignment="Bottom" Margin="0,0,0,1"
+                                                     Foreground="{DynamicResource SamAccent2}" Background="Transparent"/>
                                         <ctrl:PathTextBlock Text="{Binding Name}" Margin="6,0"
                                                             FontSize="12" VerticalAlignment="Center"
                                                             ToolTip.Tip="{Binding Name}"/>

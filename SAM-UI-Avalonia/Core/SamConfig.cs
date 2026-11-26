@@ -46,6 +46,8 @@ public sealed class SamConfig
     // --- jukebox
     /// <summary>Start the default tune when the app opens.</summary>
     public bool AutoPlayMusic { get; set; } = true;
+    /// <summary>User's own start-up song (full path). Empty = play whatever was playing at last exit.</summary>
+    public string? StartupTune { get; set; }
     public bool JukeboxEnabled { get; set; }
     public string? JukeboxTune { get; set; }
     public int JukeboxSub { get; set; }

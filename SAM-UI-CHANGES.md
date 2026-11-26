@@ -1,5 +1,13 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.3.1 – 2026-11-26
+- **Fix: per-file progress.** The upstream backend reported progress in 5% steps, so a big archive sat at 0% with no bar for minutes. `TorrentZipRebuild.cs` and `TorrentZipMake.cs` now report every 1% (two lines each; the only change to upstream's SAM/TrrntZip). While a file is still at 0%, which includes the backend's initial read/check of the archive, a thin animated stripe under the name shows it's working.
+- **Jukebox start-up song:**
+  1. the user's own **START SONG** from SETUP, if set
+  2. otherwise the song playing when SAM-UI last closed, or the next one after it if that file is gone (no error)
+  3. first run: "echoing (banana)"
+  4. no tunes at all: "NO SONGS DETECTED, ADD SOME!"
+
 ## v1.3.0 – 2026-11-26
 - **Vector balls** are much bigger: the formation fills about three quarters of the output window at the top of each bounce. It now bounces off the bottom edge of the output window, just above the scroller, instead of mid-air. Shadows sit on that edge while the floor is showing.
 - **Star density** slider in SETUP (50 to 2,000 stars, default 180), saved to settings.

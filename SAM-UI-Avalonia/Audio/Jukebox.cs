@@ -67,32 +67,84 @@ public sealed class Jukebox
 
     public static string TunesFolder => Path.Combine(AppContext.BaseDirectory, "Tunes");
 
-    /// <summary>Pick the remembered tune, or the default one in the Tunes folder (loaded silently).</summary>
+    public const string NoSongsMessage = "NO SONGS DETECTED, ADD SOME!";
+
+    /// <summary>
+    /// Picks the start-up tune and loads its folder as the playlist (silently):
+    ///   1. the user's own startup song (SETUP), if set and it still exists
+    ///   2. the song that was playing when SAM-UI last closed
+    ///      - gone? the next song after it in the same folder (no error)
+    ///   3. first run: the default "echoing (banana)"
+    ///   4. otherwise the first tune in the Tunes folder
+    ///   5. nothing at all: "NO SONGS DETECTED, ADD SOME!"
+    /// </summary>
     public void Init()
     {
         if (!Available) { Title = "JUKEBOX NEEDS WINDOWS"; Changed?.Invoke(); return; }
-        string? path = _cfg.JukeboxTune;
-        int sub = _cfg.JukeboxSub;
-        if (string.IsNullOrEmpty(path) || !File.Exists(path))
+
+        (string? path, int sub) = ResolveStartTune();
+        if (path == null)
         {
-            string def = Path.Combine(TunesFolder, DefaultTune);
-            path = File.Exists(def) ? def : null;
-            sub = 0;
-            if (path == null && Directory.Exists(TunesFolder))
-                path = Directory.EnumerateFiles(TunesFolder).Where(IsTune).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            _list = new List<TuneEntry>();
+            _index = -1;
+            Title = NoSongsMessage;
+            Format = "";
+            Changed?.Invoke();
+            return;
         }
-        if (path == null) { Changed?.Invoke(); return; }
         LoadFolder(path, sub);
         Changed?.Invoke();
     }
 
-    /// <summary>Auto-play at start-up: always the default tune ("echoing (banana)").</summary>
-    public void PlayDefault()
+    private (string? Path, int Sub) ResolveStartTune()
     {
-        if (!Available) return;
+        // 1. user-chosen startup song
+        if (!string.IsNullOrEmpty(_cfg.StartupTune) && File.Exists(_cfg.StartupTune))
+            return (_cfg.StartupTune, 0);
+
+        // 2. last played
+        string? last = _cfg.JukeboxTune;
+        if (!string.IsNullOrEmpty(last))
+        {
+            if (File.Exists(last)) return (last, _cfg.JukeboxSub);
+            string? next = NextTuneAfter(last);
+            if (next != null) return (next, 0);
+        }
+
+        // 3. first run default, 4. anything in Tunes
         string def = Path.Combine(TunesFolder, DefaultTune);
-        if (File.Exists(def)) Open(def);
-        else if (Current != null) StartCurrent(forcePlay: true);
+        if (File.Exists(def)) return (def, 0);
+        return (TunesIn(TunesFolder).FirstOrDefault(), 0);
+    }
+
+    /// <summary>The tune that sorts after a (deleted) file in its folder, wrapping round; falls back to the Tunes folder.</summary>
+    private string? NextTuneAfter(string missing)
+    {
+        string? dir = Path.GetDirectoryName(missing);
+        List<string> tunes = dir != null && Directory.Exists(dir) ? TunesIn(dir) : new List<string>();
+        if (tunes.Count == 0) tunes = TunesIn(TunesFolder);
+        if (tunes.Count == 0) return null;
+        string name = Path.GetFileName(missing);
+        return tunes.FirstOrDefault(t => StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(t), name) > 0) ?? tunes[0];
+    }
+
+    /// <summary>Playable files in a folder, sorted by name.</summary>
+    public List<string> TunesIn(string dir)
+    {
+        try
+        {
+            return Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir).Where(IsTune).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList()
+                : new List<string>();
+        }
+        catch { return new List<string>(); }
+    }
+
+    /// <summary>Auto-play at start-up: whatever <see cref="Init"/> picked.</summary>
+    public void PlayStartup()
+    {
+        if (!Available || Current == null) return;
+        StartCurrent(forcePlay: true);
     }
 
     public bool IsTune(string f) => Extensions.Contains(Path.GetExtension(f));

@@ -62,6 +62,12 @@
                 <StackPanel Spacing="6">
                     <TextBlock Classes="h" Text="░▒▓ JUKEBOX"/>
                     <CheckBox Content="AUTO-PLAY MUSIC WHEN SAM-UI STARTS" IsChecked="{Binding AutoPlayMusic}"/>
+                    <Grid ColumnDefinitions="110,*">
+                        <TextBlock Classes="lbl" Text="START SONG ►"/>
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding StartupTuneChoices}" SelectedItem="{Binding SelectedStartupTune}"
+                                  ToolTip.Tip="LAST SONG PLAYED = carry on with whatever was playing when you closed SAM-UI. Pick a song to always start with it."/>
+                    </Grid>
                     <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
                                Text="Volume is remembered. Right-click SAM-UI on the taskbar to pause music or skip a tune."/>
                 </StackPanel>

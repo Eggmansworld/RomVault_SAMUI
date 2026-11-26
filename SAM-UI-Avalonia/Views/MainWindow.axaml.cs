@@ -78,7 +78,7 @@ public partial class MainWindow : Window
         {
             jb.Init();
             UpdateJukebox();
-            if (App.Config.AutoPlayMusic) jb.PlayDefault();
+            if (App.Config.AutoPlayMusic) jb.PlayStartup();
         };
     }
 
@@ -361,7 +361,7 @@ public partial class MainWindow : Window
     private void UpdateJukebox()
     {
         Jukebox jb = App.Jukebox;
-        JbTitle.Text = jb.Current == null ? (jb.Available ? "NO TUNES - CLiCK OPEN" : jb.Title) : jb.Title;
+        JbTitle.Text = jb.Current == null ? (jb.Available ? Jukebox.NoSongsMessage : jb.Title) : jb.Title;
         ToolTip.SetTip(JbTitle, jb.Current?.Path);
         JbTime.Text = jb.Current == null ? "" : $"{Clock(jb.Position)}/{Clock(jb.Duration)}";
         JbProgress.Value = jb.Duration > 0 ? Math.Min(1, jb.Position / jb.Duration) : 0;

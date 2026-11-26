@@ -766,6 +766,44 @@ public partial class MainWindowViewModel : ViewModelBase
         Message = $"VECTOR BALLS: {BallCount}   (+ / - for more or less)";
     }
 
+    // ---- startup song (SETUP)
+
+    public const string LastPlayedChoice = "(LAST SONG PLAYED)";
+    private Dictionary<string, string>? _tuneByName;
+
+    /// <summary>"(LAST SONG PLAYED)" plus every tune in the Tunes folder.</summary>
+    public IReadOnlyList<string> StartupTuneChoices
+    {
+        get
+        {
+            _tuneByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (!Design.IsDesignMode && App.Jukebox != null)
+            {
+                foreach (string p in App.Jukebox.TunesIn(Audio.Jukebox.TunesFolder))
+                    _tuneByName[Path.GetFileName(p)] = p;
+                // a startup song picked from another folder (OPEN) stays selectable
+                if (!string.IsNullOrEmpty(_cfg.StartupTune) && File.Exists(_cfg.StartupTune))
+                    _tuneByName.TryAdd(Path.GetFileName(_cfg.StartupTune), _cfg.StartupTune);
+            }
+            return new[] { LastPlayedChoice }.Concat(_tuneByName.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    public string SelectedStartupTune
+    {
+        get => !string.IsNullOrEmpty(_cfg.StartupTune) && File.Exists(_cfg.StartupTune)
+            ? Path.GetFileName(_cfg.StartupTune)
+            : LastPlayedChoice;
+        set
+        {
+            if (value == null) return;
+            _cfg.StartupTune = value == LastPlayedChoice ? null
+                : (_tuneByName ?? new()).TryGetValue(value, out string? p) ? p : null;
+            _cfg.Save();
+            OnPropertyChanged();
+        }
+    }
+
     public bool AutoPlayMusic
     {
         get => _cfg.AutoPlayMusic;
@@ -1038,10 +1076,12 @@ public partial class samFile : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProgressText))]
     [NotifyPropertyChangedFor(nameof(ProgressFraction))]
+    [NotifyPropertyChangedFor(nameof(IsStarting))]
     private int _progress;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProgressText))]
+    [NotifyPropertyChangedFor(nameof(IsStarting))]
     private bool _isProcessing;
 
     [ObservableProperty]
@@ -1063,6 +1103,12 @@ public partial class samFile : ObservableObject
     public bool IsWarn => Kind == RowKind.Warn;
     public bool IsBad => Kind == RowKind.Bad;
     public bool IsWorking => Kind == RowKind.Working;
+
+    /// <summary>
+    /// Processing but no progress reported yet (the backend first reads/checks the whole archive,
+    /// which can take minutes on big files): an animated stripe shows it's alive.
+    /// </summary>
+    public bool IsStarting => IsProcessing && Progress == 0;
 
     /// <summary>0..1 for the progress fill drawn behind the filename.</summary>
     public double ProgressFraction => Math.Clamp(Progress / 100.0, 0, 1);

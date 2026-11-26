@@ -160,10 +160,10 @@ namespace TrrntZip
                         int sizenow = sizetogo > (ulong)bufferSize ? bufferSize : (int)sizetogo;
 
                         fileSizeProgress += (ulong)sizenow;
-                        int filePercent = (int)((double)fileSizeProgress / fileSizeTotal * 20);
+                        int filePercent = (int)((double)fileSizeProgress / fileSizeTotal * 100); // 1% steps (was 5%)
                         if (filePercent != filePercentReported)
                         {
-                            statusCallBack?.Invoke(threadId, fileId, filePercent * 5);
+                            statusCallBack?.Invoke(threadId, fileId, filePercent);
                             filePercentReported = filePercent;
                         }
 
