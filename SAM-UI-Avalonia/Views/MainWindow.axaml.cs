@@ -326,6 +326,7 @@ public partial class MainWindow : Window
             case Key.OemPlus or Key.Add when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 8 : 1); break;
             case Key.OemMinus or Key.Subtract when e.Source is not TextBox: _vm.NudgeBalls(e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? -8 : -1); break;
             case Key.A when e.Source is not TextBox && e.KeyModifiers == KeyModifiers.None: _vm.Boing(); break;
+            case Key.D when e.Source is not TextBox && e.KeyModifiers == KeyModifiers.None: _vm.Devil(); break;
             default: return;
         }
         e.Handled = true;

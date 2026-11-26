@@ -17,7 +17,7 @@ zip/7z archives into TorrentZip, Zip-ZSTD, 7Z-ZSTD and 7Z-LZMA, using RomVault's
 - **Never more than 80% of your CPU threads.** Workers also run at below-normal priority, so the PC stays usable.
 - **Progress bars behind the filenames**, plus coloured PAUSE (orange) / SOFT STOP (yellow) / HARD STOP (red).
 - **Warez look.** 5 themes, copper bars, a sine scroller, 3D vector objects, CRT scanlines and ANSI art. The FX switch turns the animation off.
-- **Jukebox.** Plays MOD/S3M/XM/IT (libopenmpt) and C64 SID tunes while you crunch. 21 handpicked memorable tunes are bundled; drop more into `Tunes\`.
+- **Jukebox.** Plays MOD/S3M/XM/IT (libopenmpt) and C64 SID tunes while you crunch. 25 handpicked memorable tunes are bundled; drop more into `Tunes\`.
 
 See [SAM-UI-CHANGES.md](SAM-UI-CHANGES.md) for details.
 

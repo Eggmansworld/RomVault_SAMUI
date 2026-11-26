@@ -1016,6 +1016,20 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    /// <summary>The "D" easter egg.</summary>
+    public void Devil()
+    {
+        VectorBackdrop.TriggerDevil();
+        Message = "...speak of the devil!";
+    }
+
+    /// <summary>The Boing ball rolls out of the window onto the desktop when it leaves.</summary>
+    public bool BoingEscapes
+    {
+        get => _cfg.BoingEscapes;
+        set { _cfg.BoingEscapes = VectorBackdrop.BoingEscapes = value; _cfg.Save(); OnPropertyChanged(); }
+    }
+
     /// <summary>The "A" easter egg on the main window.</summary>
     public void Boing()
     {
@@ -1064,6 +1078,23 @@ public partial class MainWindowViewModel : ViewModelBase
             if (value == null) return;
             _cfg.StartupTune = value == LastPlayedChoice ? null
                 : (_tuneByName ?? new()).TryGetValue(value, out string? p) ? p : null;
+            _cfg.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<string> SidLengthChoices { get; } = new[] { "UNTIL THE SONG ENDS", "MAX 3 MINUTES", "MAX 5 MINUTES", "MAX 10 MINUTES" };
+    private static readonly int[] SidLengthSeconds = { 0, 180, 300, 600 };
+
+    /// <summary>SID files don't store their length: play until they go quiet, or cap looping ones.</summary>
+    public string SelectedSidLength
+    {
+        get => SidLengthChoices[Math.Max(0, Array.IndexOf(SidLengthSeconds, _cfg.SidSeconds))];
+        set
+        {
+            int i = Array.IndexOf(SidLengthChoices.ToArray(), value);
+            if (i < 0) return;
+            _cfg.SidSeconds = SidLengthSeconds[i];
             _cfg.Save();
             OnPropertyChanged();
         }

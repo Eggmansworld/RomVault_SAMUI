@@ -1,5 +1,12 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.6.0 – 2026-11-26
+- **SID tunes play to the end.** SID files don't store their length, so there used to be a 3-minute cut-off. Now a SID plays until it goes quiet (the jukebox then moves on). Tunes that loop forever keep playing until skipped. SETUP > SID TUNES can cap them at 3, 5 or 10 minutes.
+- SETUP wording: **NORMALIZE SONG VOLUMES**.
+- **First-run song: "God = Martin Galway" (Jogeir Liljedahl).** Falls back to "echoing (banana)" if it's missing.
+- **25 bundled tunes**: added God = Martin Galway, Hospital Since Friday!, Megatrainer and Mental Hangover.
+- A couple of new surprises are hiding in there.
+
 ## v1.5.1 – 2026-11-26
 - **Fix: added files moved to the top weren't processed next.** ADD TO QUEUE hands files to RomVault's FileAdder, which always appends to the end of the worker queue, and nothing re-ordered it afterwards. Every submission now re-syncs the worker queue to the list order once FileAdder is done.
 - **TOP now means "next in line":** moved / added rows go directly under the last row that's processing or finished, not above the files already converted.

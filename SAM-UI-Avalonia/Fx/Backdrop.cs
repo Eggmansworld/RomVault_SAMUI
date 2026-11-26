@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using SAM_UI_Avalonia.Core;
@@ -39,6 +40,7 @@ public static class FxSettings
         Copper = c.ShowCopper;
         BallCount = c.BallCount;
         StarCount = c.StarCount;
+        VectorBackdrop.BoingEscapes = c.BoingEscapes;
     }
 }
 
@@ -280,7 +282,15 @@ public sealed class VectorBackdrop : FxControl
         if (floorAlpha > 0.01) DrawFloor(ctx, s, t, w, h, floorAlpha);
         if (FxSettings.Objects && Mode != "NONE") DrawObject(ctx, t, w, h);
         if (FxSettings.Balls) DrawBalls(ctx, t, w, h, floorAlpha);
-        if (AllowBoing) UpdateAndDrawBoing(ctx, w, h);
+        if (AllowBoing)
+        {
+            UpdateAndDrawBoing(ctx, w, h);
+            if (FxClock.Enabled)
+            {
+                if (_devilRequested) { _devilRequested = false; if (!_devil.Active) _devil.Start(FxClock.T); }
+                _devil.Draw(ctx, FxClock.T, w, h);
+            }
+        }
     }
 
     private void DrawStars(DrawingContext ctx, Scheme s, double t, double w, double h)
@@ -553,6 +563,15 @@ public sealed class VectorBackdrop : FxControl
     /// <summary>Only the main window's backdrop shows the ball.</summary>
     public bool AllowBoing { get; set; }
 
+    private static bool _devilRequested;
+    private readonly DevilEgg _devil = new();
+
+    /// <summary>"D" key: release the devil.</summary>
+    public static void TriggerDevil() => _devilRequested = true;
+
+    /// <summary>The ball rolls out of the window onto the desktop when it leaves (Windows only).</summary>
+    public static bool BoingEscapes { get; set; } = true;
+
     /// <summary>"A" key: bring the ball in now.</summary>
     public static void TriggerBoing() => _boingRequested = true;
 
@@ -565,12 +584,20 @@ public sealed class VectorBackdrop : FxControl
         if (!_boingActive)
         {
             if (!_boingRequested && t - _boingLastEnd < BoingEverySeconds) return;
+
             _boingRequested = false;
             _boingActive = true;
             _boingStart = _boingLastT = t;
             _boingDir = Random.Shared.Next(2) == 0 ? 1 : -1;   // enter from the left or the right
             _boingX = _boingDir > 0 ? -r : w + r;
             _boingSpin = 0;
+        }
+
+        else if (_boingRequested)
+        {
+            // "A" again while it's here: off you go
+            _boingRequested = false;
+            _boingStart = Math.Min(_boingStart, t - BoingStaySeconds - 0.01);
         }
 
         double dt = Math.Clamp(t - _boingLastT, 0, 0.1);
@@ -596,12 +623,28 @@ public sealed class VectorBackdrop : FxControl
         // vertical: parabolic bounce off the bottom edge
         const double period = 2.4;
         double p = (t - _boingStart) / period % 1;
-        double cy = h - r - 4 * p * (1 - p) * Math.Max(0, h - 2 * r);
+        double bounceH = Math.Max(0, h - 2 * r);
+        double cy = h - r - 4 * p * (1 - p) * bounceH;
+
+        // Leaving and touching the window edge: hand the ball to a see-through window so it
+        // rolls out over the desktop and off the screen.
+        bool atEdge = _boingDir > 0 ? _boingX + r >= w : _boingX - r <= 0;
+        if (leaving && atEdge && BoingEscapes && OperatingSystem.IsWindows() && TopLevel.GetTopLevel(this) is { } top)
+        {
+            double vy = -4 * bounceH * (1 - 2 * p) / period;          // current vertical speed (DIP/s, down = +)
+            double g = Math.Max(8 * bounceH / (period * period), 900); // same "gravity" as inside the window
+            PixelPoint topLeft = this.PointToScreen(new Point(_boingX - r, cy - r));
+            BoingOverlay.Launch(topLeft, r, top.RenderScaling, _boingDir, speed, _boingSpin, vy, g);
+            _boingActive = false;
+            _boingLastEnd = t; // reset the 20 minute timer
+            return;
+        }
+
         DrawBoingBall(ctx, new Point(_boingX, cy), r, _boingSpin);
     }
 
     /// <summary>The red and white checkered sphere: 8 x 16 checks, axis tilted ~17 degrees.</summary>
-    private static void DrawBoingBall(DrawingContext ctx, Point c, double r, double spin)
+    internal static void DrawBoingBall(DrawingContext ctx, Point c, double r, double spin)
     {
         const int lat = 8, lon = 16;
         const double tilt = -0.30;

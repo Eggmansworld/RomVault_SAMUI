@@ -16,7 +16,7 @@ public sealed class SamConfig
 {
     /// <summary>Bumped when a new release changes a default that should replace old saved values.</summary>
     public int ConfigVersion { get; set; }
-    private const int CurrentVersion = 3;
+    private const int CurrentVersion = 4;
 
     // --- processing (the user's saved defaults; the app always starts on these)
     public InputZipType DefaultInput { get; set; } = InputZipType.Zip;
@@ -46,6 +46,8 @@ public sealed class SamConfig
     public bool ShowFloor { get; set; } = true;
     public int BallCount { get; set; } = 24;
     public int StarCount { get; set; } = 180;
+    /// <summary>The Boing ball rolls out onto the desktop when it leaves the window.</summary>
+    public bool BoingEscapes { get; set; } = true;
     /// <summary>Custom sine scroller text. Empty = the built-in text.</summary>
     public string? ScrollText { get; set; }
 
@@ -60,7 +62,8 @@ public sealed class SamConfig
     public int JukeboxVolume { get; set; } = 40;
     /// <summary>Even out loud / quiet tunes (each tune is measured before it plays).</summary>
     public bool NormalizeVolume { get; set; } = true;
-    public int SidSeconds { get; set; } = 180;
+    /// <summary>Max play time for a SID tune in seconds. 0 = play until it ends (goes silent).</summary>
+    public int SidSeconds { get; set; }
     public bool JukeboxShuffle { get; set; }
     /// <summary>Per SID file name (lower case): subtunes to play. Missing = all music subtunes.</summary>
     public Dictionary<string, List<int>> SidPicks { get; set; } = new()
@@ -90,6 +93,8 @@ public sealed class SamConfig
                 }
                 if (cfg.ConfigVersion < 3 && cfg.JukeboxVolume == 50)
                     cfg.JukeboxVolume = 40; // v1.5.1 default (only if it was never changed)
+                if (cfg.ConfigVersion < 4)
+                    cfg.SidSeconds = 0; // v1.6: SIDs play through to the end
                 cfg.ConfigVersion = CurrentVersion;
                 return cfg;
             }

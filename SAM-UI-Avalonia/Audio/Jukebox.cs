@@ -18,7 +18,9 @@ public sealed record TuneEntry(string Path, int Sub)
 /// </summary>
 public sealed class Jukebox
 {
-    public const string DefaultTune = "echoing (banana).mod";
+    /// <summary>First-run tune: the file whose name starts with this. Falls back to <see cref="FallbackTune"/>.</summary>
+    public const string DefaultTuneName = "God = Martin Galway";
+    public const string FallbackTune = "echoing (banana).mod";
 
     private readonly SamConfig _cfg;
     private readonly StreamOut _out = new();
@@ -112,8 +114,9 @@ public sealed class Jukebox
         }
 
         // 3. first run default, 4. anything in Tunes
-        string def = Path.Combine(TunesFolder, DefaultTune);
-        if (File.Exists(def)) return (def, 0);
+        string? def = TunesIn(TunesFolder).FirstOrDefault(p => Path.GetFileName(p).StartsWith(DefaultTuneName, StringComparison.OrdinalIgnoreCase))
+                     ?? (File.Exists(Path.Combine(TunesFolder, FallbackTune)) ? Path.Combine(TunesFolder, FallbackTune) : null);
+        if (def != null) return (def, 0);
         return (TunesIn(TunesFolder).FirstOrDefault(), 0);
     }
 
@@ -344,7 +347,7 @@ public sealed class Jukebox
             if (gen != _gen) { src.Dispose(); return; } // user skipped while loading
             Title = src.Title;
             Format = src.Format;
-            Duration = src.Duration > 0 ? src.Duration : (src is NormalizedSource { Inner: SidSource } ? _cfg.SidSeconds : 0);
+            Duration = src.Duration > 0 ? src.Duration : (src is NormalizedSource { Inner: SidSource } && _cfg.SidSeconds > 0 ? _cfg.SidSeconds : 0);
             _failStreak = 0;
             _out.Play(src);
             if (_cfg.JukeboxEnabled) _timer.Start();
