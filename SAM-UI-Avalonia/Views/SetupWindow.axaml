@@ -57,6 +57,20 @@
                 </StackPanel>
             </Border>
 
+            <!-- scroller text -->
+            <Border Classes="panel" Padding="14,10" IsEnabled="{Binding ShowScroller}">
+                <StackPanel Spacing="6">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Classes="kg small" Content="↺ DEFAULT TEXT" Command="{Binding ResetScrollTextCommand}"/>
+                        <TextBlock Classes="h" Text="░▒▓ SCROLLER TEXT" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <TextBox Text="{Binding ScrollEditText}" TextWrapping="Wrap" AcceptsReturn="False"
+                             Height="76" VerticalContentAlignment="Top" MaxLength="2000"/>
+                    <TextBlock Classes="dim" FontSize="11" TextWrapping="Wrap"
+                               Text="Updates as you type. The pixel font has A-Z, 0-9 and . , ! ? ' &quot; - _ : ; / \ ( ) [ ] * + = &lt; &gt; # &amp; @ % $ ^ |  (anything else shows as a space)."/>
+                </StackPanel>
+            </Border>
+
             <!-- music -->
             <Border Classes="panel" Padding="14,10">
                 <StackPanel Spacing="6">

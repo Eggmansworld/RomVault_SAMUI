@@ -810,7 +810,29 @@ public partial class MainWindowViewModel : ViewModelBase
         set { _cfg.AutoPlayMusic = value; _cfg.Save(); OnPropertyChanged(); }
     }
 
-    public string ScrollText { get; } =
+    /// <summary>What the sine scroller shows: the user's text from SETUP, or the built-in one.</summary>
+    public string ScrollText => string.IsNullOrWhiteSpace(_cfg.ScrollText) ? DefaultScrollText : _cfg.ScrollText;
+
+    private string? _scrollEdit;
+
+    /// <summary>The SETUP text box. Can be empty while editing (the scroller then shows the built-in text).</summary>
+    public string ScrollEditText
+    {
+        get => _scrollEdit ??= ScrollText;
+        set
+        {
+            _scrollEdit = (value ?? "").Replace("\r", " ").Replace("\n", " ");
+            _cfg.ScrollText = string.IsNullOrWhiteSpace(_scrollEdit) || _scrollEdit == DefaultScrollText ? null : _scrollEdit;
+            _cfg.Save();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ScrollText));
+        }
+    }
+
+    [RelayCommand]
+    private void ResetScrollText() => ScrollEditText = DefaultScrollText;
+
+    public const string DefaultScrollText =
         "EGGMAN PRESENTS  -  SAM-UI  -  THE STRUCTURED ARCHIVE MAKER  ***  " +
         "TORRENTZIP  //  ZIP-ZSTD  //  7Z-ZSTD  //  7Z-LZMA  ***  " +
         "DROP YOUR FILEZ, HIT PREVIEW, HIT START, KICK BACK  ***  " +

@@ -56,6 +56,7 @@ public partial class MainWindow : Window
 
         // size + placement: always on the primary screen, never off-screen
         PlaceWindow();
+        RestoreColumnWidths();
         Opened += (_, _) =>
         {
             if (App.Config.WindowMaximized) WindowState = WindowState.Maximized;
@@ -129,6 +130,27 @@ public partial class MainWindow : Window
         WindowState = WindowState.Normal;
         FitAndCenter(target, App.Config.WindowWidth, App.Config.WindowHeight);
         if (_vm != null) _vm.Message = "SAM-UI was off-screen (display change) - moved back to your main screen.";
+    }
+
+    /// <summary>DONE, FILENAME and SIZE keep the widths the user dragged them to; STATUS fills the rest.</summary>
+    private void RestoreColumnWidths()
+    {
+        List<double> w = App.Config.ColumnWidths;
+        for (int i = 0; i < Math.Min(w.Count, FilesGrid.Columns.Count - 1); i++)
+            if (w[i] >= 30 && w[i] <= 4000)
+                FilesGrid.Columns[i].Width = new DataGridLength(w[i]);
+    }
+
+    private void RememberColumnWidths()
+    {
+        var widths = new List<double>();
+        for (int i = 0; i < FilesGrid.Columns.Count - 1; i++)
+        {
+            double a = FilesGrid.Columns[i].ActualWidth;
+            if (double.IsNaN(a) || a <= 0) return; // grid not laid out yet: keep what was saved
+            widths.Add(Math.Round(a));
+        }
+        App.Config.ColumnWidths = widths;
     }
 
     /// <summary>Remember the size the user picks (normal state only) and whether it's maximised.</summary>
@@ -223,6 +245,7 @@ public partial class MainWindow : Window
         }
 
         RememberSize();
+        RememberColumnWidths();
         App.Config.Save();
         Workers.RemoveAllWorks();
     }

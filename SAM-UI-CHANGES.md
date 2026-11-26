@@ -1,5 +1,9 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.3.2 – 2026-11-26
+- The output list remembers the widths you drag the DONE, FILENAME and SIZE columns to (STATUS fills the rest). They're saved when SAM-UI closes.
+- The sine scroller text can be edited in SETUP and updates live as you type. **↺ DEFAULT TEXT** brings back the built-in text, and an empty box shows it too.
+
 ## v1.3.1 – 2026-11-26
 - **Fix: per-file progress.** The upstream backend reported progress in 5% steps, so a big archive sat at 0% with no bar for minutes. `TorrentZipRebuild.cs` and `TorrentZipMake.cs` now report every 1% (two lines each; the only change to upstream's SAM/TrrntZip). While a file is still at 0%, which includes the backend's initial read/check of the archive, a thin animated stripe under the name shows it's working.
 - **Jukebox start-up song:**

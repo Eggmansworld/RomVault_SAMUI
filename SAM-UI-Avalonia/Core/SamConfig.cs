@@ -28,6 +28,8 @@ public sealed class SamConfig
     public double WindowWidth { get; set; } = 1680;
     public double WindowHeight { get; set; } = 1050;
     public bool WindowMaximized { get; set; }
+    /// <summary>Output list column widths (DONE, FILENAME, SIZE); STATUS fills the rest. Empty = defaults.</summary>
+    public List<double> ColumnWidths { get; set; } = new();
 
     // --- look
     public string Theme { get; set; } = Fx.Skin.All[0].Name;
@@ -42,6 +44,8 @@ public sealed class SamConfig
     public bool ShowFloor { get; set; } = true;
     public int BallCount { get; set; } = 24;
     public int StarCount { get; set; } = 180;
+    /// <summary>Custom sine scroller text. Empty = the built-in text.</summary>
+    public string? ScrollText { get; set; }
 
     // --- jukebox
     /// <summary>Start the default tune when the app opens.</summary>
