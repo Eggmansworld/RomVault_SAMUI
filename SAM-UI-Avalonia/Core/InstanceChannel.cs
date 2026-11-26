@@ -11,9 +11,17 @@ public static class InstanceChannel
 {
     private static string PipeName => "SAM-UI-EggmanEdition-" + Environment.UserName;
 
+    /// <summary>True when another SAM-UI (for this user) is already listening.</summary>
+    public static bool OtherInstanceRunning()
+    {
+        try { return OperatingSystem.IsWindows() && File.Exists(@"\\.\pipe\" + PipeName); }
+        catch { return false; }
+    }
+
     /// <summary>Sends a command to the running instance. False if none is running.</summary>
     public static bool Send(string command)
     {
+        if (!OtherInstanceRunning()) return false; // don't sit in Connect() when nobody is listening
         try
         {
             using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);

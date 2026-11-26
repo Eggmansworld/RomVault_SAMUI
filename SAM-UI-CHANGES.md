@@ -1,5 +1,11 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.4.2 – 2026-11-26
+- **One SAM-UI at a time.** Launching it while it's already open no longer opens a second window, with a second set of workers that could go past the 80% CPU cap.
+  - Launched with files/folders (Explorer "Send To", a shortcut, dropping onto the exe), it adds them to the open window's list as Queued and brings that window to the front. Relative paths work.
+  - Launched with nothing, it just restores and focuses the open window.
+  - When SAM-UI isn't running, start-up is unchanged (no delay).
+
 ## v1.4.1 – 2026-11-26
 - **Fix:** with THREADS set to 1 as the saved default, START did nothing until threads were raised to 2. The thread count started at 1 inside the app, so setting it to the saved 1 at start-up never created a worker. It now always creates the workers at start-up.
 - **Sortable columns:** click FILENAME (A-Z / Z-A by file name), SIZE (by actual bytes) or STATUS. The sort is kept when more files are added or a job starts.

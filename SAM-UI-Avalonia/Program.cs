@@ -20,8 +20,21 @@ namespace SAM_UI_Avalonia
                 return;
             }
 
+            // SAM-UI already open? Add these files/folders to its list (or just bring it to the
+            // front) instead of opening a second window with a second set of workers.
+            if (InstanceChannel.OtherInstanceRunning())
+            {
+                string[] paths = args.Where(a => File.Exists(a) || Directory.Exists(a)).Select(Path.GetFullPath).ToArray();
+                if (OperatingSystem.IsWindows()) AllowSetForegroundWindow(-1); // let it come to the front
+                if (InstanceChannel.Send(paths.Length > 0 ? "stage|" + string.Join("|", paths) : "show"))
+                    return;
+            }
+
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool AllowSetForegroundWindow(int processId);
 
         // Avalonia configuration, don't remove; also used by visual designer.
         public static AppBuilder BuildAvaloniaApp()

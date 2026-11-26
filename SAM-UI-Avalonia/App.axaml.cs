@@ -42,14 +42,22 @@ namespace SAM_UI_Avalonia
                     JumpList.Update(false);
                     Jukebox.PlayingChanged += playing => { if (OperatingSystem.IsWindows()) JumpList.Update(playing); };
                 }
+                var vm = new MainWindowViewModel(Config);
+                desktop.MainWindow = new MainWindow { DataContext = vm };
+
+                // Commands from a second launch: taskbar music tasks, files from Explorer
+                // "Send To" / a shortcut, or just "come to the front".
                 InstanceChannel.Listen(cmd => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
                 {
                     if (cmd == "jukebox toggle") Jukebox.TogglePlay();
                     else if (cmd == "jukebox next") Jukebox.Next();
+                    else if (cmd == "show") BringToFront(desktop.MainWindow);
+                    else if (cmd.StartsWith("stage|", StringComparison.Ordinal))
+                    {
+                        vm.Stage(cmd.Substring(6).Split('|', StringSplitOptions.RemoveEmptyEntries));
+                        BringToFront(desktop.MainWindow);
+                    }
                 }));
-
-                var vm = new MainWindowViewModel(Config);
-                desktop.MainWindow = new MainWindow { DataContext = vm };
 
                 // Paths on the command line (e.g. from an Explorer "Send To" shortcut) are
                 // staged, never started.
@@ -65,6 +73,14 @@ namespace SAM_UI_Avalonia
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        private static void BringToFront(Avalonia.Controls.Window? w)
+        {
+            if (w == null) return;
+            if (w.WindowState == Avalonia.Controls.WindowState.Minimized)
+                w.WindowState = Config.WindowMaximized ? Avalonia.Controls.WindowState.Maximized : Avalonia.Controls.WindowState.Normal;
+            w.Activate();
         }
     }
 }
