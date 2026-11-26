@@ -1,5 +1,8 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.6.2 – 2026-11-26
+- Some secrets are now better kept.
+
 ## v1.6.1 – 2026-11-26
 - Some unexpected guests have learned better manners... mostly.
 
