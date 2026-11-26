@@ -93,7 +93,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private int _maxThreadCount = 1;
 
     [ObservableProperty]
-    private int _threadCount = 1;
+    // Starts at 0 (no workers) so the first assignment always fires OnThreadCountChanged and
+    // creates the workers - starting at 1 meant a saved default of 1 thread created none at all.
+    private int _threadCount;
 
     /// <summary>Not saved by itself: threads are part of the user's defaults (★ SAVE AS DEFAULT).</summary>
     partial void OnThreadCountChanged(int value)
@@ -1213,6 +1215,7 @@ public enum RowKind { Neutral, Working, Good, Warn, Bad }
 public partial class samFile : ObservableObject
 {
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FileName))]
     private string _name = "";
 
     [ObservableProperty]
@@ -1275,6 +1278,9 @@ public partial class samFile : ObservableObject
     };
 
     public string SizeText => FormatSize(Size);
+
+    /// <summary>Just the file / folder name (for sorting the FILENAME column A-Z).</summary>
+    public string FileName => Path.GetFileName(Name.TrimEnd('\\', '/'));
 
     public static string FormatSize(long bytes)
     {

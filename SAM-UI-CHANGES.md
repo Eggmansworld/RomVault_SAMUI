@@ -1,5 +1,9 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.4.1 – 2026-11-26
+- **Fix:** with THREADS set to 1 as the saved default, START did nothing until threads were raised to 2. The thread count started at 1 inside the app, so setting it to the saved 1 at start-up never created a worker. It now always creates the workers at start-up.
+- **Sortable columns:** click FILENAME (A-Z / Z-A by file name), SIZE (by actual bytes) or STATUS. The sort is kept when more files are added or a job starts.
+
 ## v1.4.0 – 2026-11-26 – the list is the queue
 - **Dropped or picked items go straight into the list** as **Queued**, scanned with the IN filter and shown with sizes. The status bar shows `QUEUED n (size)`. PREVIEW is gone because the list *is* the preview. The PATH box is now "type a path, press ENTER / ADD".
 - Drops keep adding to the list. After a finished job, the next drop starts a fresh list. Changing IN re-scans what was dropped, and rows you removed stay removed.

@@ -196,6 +196,32 @@ public partial class MainWindow : Window
         _hooked?.Dispose();
         _hooked = _vm == null ? null : new ObservableCollectionHook(_vm.Files, OnFilesChanged);
         UpdateEmptyState();
+        // the list is rebuilt when rows are added / a job starts: keep the user's sort
+        Dispatcher.UIThread.Post(ReapplySort, DispatcherPriority.Background);
+    }
+
+    // =================================================================== sorting
+
+    private string? _sortPath;
+    private ListSortDirection _sortDir;
+    private bool _sortHooked;
+
+    /// <summary>After a header click, note which column / direction is now sorted.</summary>
+    private void OnGridSorting(object? sender, DataGridColumnEventArgs e) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            var sd = FilesGrid.CollectionView?.SortDescriptions.FirstOrDefault();
+            _sortPath = sd?.PropertyPath;
+            _sortDir = sd?.Direction ?? ListSortDirection.Ascending;
+        }, DispatcherPriority.Background);
+
+    private void ReapplySort()
+    {
+        if (!_sortHooked) { FilesGrid.Sorting += OnGridSorting; _sortHooked = true; }
+        if (_sortPath == null) return;
+        if (FilesGrid.CollectionView?.SortDescriptions.Count > 0) return; // still sorted
+        DataGridColumn? col = FilesGrid.Columns.FirstOrDefault(c => c.SortMemberPath == _sortPath);
+        col?.Sort(_sortDir);
     }
 
     private void OnFilesChanged(object? sender, NotifyCollectionChangedEventArgs e) => UpdateEmptyState();

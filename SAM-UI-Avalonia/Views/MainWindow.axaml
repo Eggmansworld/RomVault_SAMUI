@@ -164,7 +164,7 @@
                           ClipboardCopyMode="None"
                           RowHeight="22"
                           GridLinesVisibility="Horizontal"
-                          CanUserSortColumns="False"
+                          CanUserSortColumns="True"
                           CanUserReorderColumns="False"
                           CanUserResizeColumns="True"
                           HorizontalScrollBarVisibility="Auto">
@@ -192,7 +192,7 @@
 
                     <DataGrid.Columns>
                         <!-- percent / result tag -->
-                        <DataGridTemplateColumn Header="DONE" Width="84" MinWidth="70">
+                        <DataGridTemplateColumn Header="DONE" Width="84" MinWidth="70" CanUserSort="False">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:samFile">
                                     <TextBlock Text="{Binding ProgressText}" HorizontalAlignment="Center" VerticalAlignment="Center"
@@ -204,7 +204,7 @@
                         </DataGridTemplateColumn>
 
                         <!-- filename, with the progress bar layered behind it -->
-                        <DataGridTemplateColumn Header="FILENAME" Width="560" MinWidth="160">
+                        <DataGridTemplateColumn Header="FILENAME" SortMemberPath="FileName" Width="560" MinWidth="160">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:samFile">
                                     <Panel>
@@ -224,7 +224,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="SIZE" Width="100" MinWidth="60">
+                        <DataGridTemplateColumn Header="SIZE" SortMemberPath="Size" Width="100" MinWidth="60">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:samFile">
                                     <TextBlock Text="{Binding SizeText}" Margin="6,0" FontSize="12"
@@ -233,7 +233,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Header="STATUS" Width="*" MinWidth="180">
+                        <DataGridTemplateColumn Header="STATUS" SortMemberPath="Status" Width="*" MinWidth="180">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate x:DataType="vm:samFile">
                                     <TextBlock Text="{Binding Status}" Margin="6,0" FontSize="12"
