@@ -87,3 +87,23 @@ See [SAM-UI-CHANGES.md](SAM-UI-CHANGES.md) for the full change history.
 - Eggman's additions (SAM-UI Eggman Edition UI, jukebox, effects): MIT, see [LICENSE-EGGMAN-MIT](LICENSE-EGGMAN-MIT).
 - libopenmpt and companions: BSD-3 and others, see `SAM-UI-Avalonia/THIRD_PARTY_NOTICES.txt`.
 - Bundled tunes: all credit to their original artists (artist names in the file names, if known).
+
+## Hints
+There are 2 easter eggs in the app. I won't spoil it if you like trying to discover them. If you must know what they are, click below for the spoilers:
+
+<details>
+<summary>Tell me what the easter eggs are!!!</summary>
+
+--- 
+
+- In the setup menu, ensure "ALLOW EASTER EGGS" is checked
+- press the "A" key and watch the boing ball, it will escape the app about 40 seconds later and bounce off the screen. It will bounce across multiple monitors!
+- press the "D" key and watch the flying devil, he escapes the app about 30 seconds later. He will fly around the desktop for 10 seconds, then exit the nearest screen edge.
+
+Both escaped objects can be clicked through.
+
+The boing ball and flying devil are timed to come out at 25 and 30 minute intervals and only stay on-screen for less than a minute. They will only escape the confines of the app window if you bring them out manually with a keypress. Otherwise, they will stay within the confines of the app window and behave themselves.
+
+--- 
+
+</details>
