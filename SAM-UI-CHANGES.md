@@ -1,5 +1,9 @@
 # SAM-UI (Eggman Edition) – change log
 
+## v1.6.3 – 2026-11-27
+- **Calmer vector balls:** the bouncing ball formation bounces 25% slower.
+- SETUP: one switch has a clearer name.
+
 ## v1.6.2 – 2026-11-26
 - Some secrets are now better kept.
 

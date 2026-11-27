@@ -523,7 +523,7 @@ public sealed class VectorBackdrop : FxControl
         }
 
         // parabolic bounce: the lowest ball just touches the bottom edge on impact
-        const double period = 1.7;
+        const double period = 2.27;                // 25% slower bounce (was 1.7 s)
         double ph2 = t / period % 1;
         double bounceH = Math.Max(h * 0.08, h - (bottom - top) - h * 0.06);
         double lift = 4 * ph2 * (1 - ph2) * bounceH;
